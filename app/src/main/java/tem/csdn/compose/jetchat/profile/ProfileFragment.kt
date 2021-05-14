@@ -25,8 +25,8 @@ class ProfileFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         // Consider using safe args plugin
-        val userId = arguments?.getString("userId")
-        viewModel.setUserId(userId)
+        val profile = arguments?.getSerializable("profile") as? ProfileScreenState?
+        viewModel.setProfile(profile)
     }
 
     override fun onCreateView(

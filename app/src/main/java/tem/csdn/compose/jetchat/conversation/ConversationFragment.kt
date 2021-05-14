@@ -53,7 +53,7 @@ class ConversationFragment : Fragment() {
                         uiState = exampleUiState,
                         navigateToProfile = { user ->
                             // Click callback
-                            val bundle = bundleOf("userId" to user)
+                            val bundle = bundleOf("profile" to user)
                             findNavController().navigate(
                                 R.id.nav_profile,
                                 bundle

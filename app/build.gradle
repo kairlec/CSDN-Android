@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId "tem.csdn.compose.jetchat"
-        minSdkVersion 21
+        minSdkVersion 26
         targetSdkVersion 30
         versionCode 1
         versionName '1.0'
@@ -96,6 +96,7 @@ dependencies {
     implementation Libs.AndroidX.Compose.viewBinding
 
     implementation Libs.Accompanist.insets
+    implementation Libs.Accompanist.glide
 
     androidTestImplementation Libs.junit
     androidTestImplementation Libs.AndroidX.Test.core

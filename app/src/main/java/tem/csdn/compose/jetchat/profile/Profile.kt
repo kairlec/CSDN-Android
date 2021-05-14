@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -120,12 +119,14 @@ private fun UserInfoFields(userData: ProfileScreenState, containerHeight: Dp) {
 
         ProfileProperty(stringResource(R.string.display_name), userData.displayName)
 
-        ProfileProperty(stringResource(R.string.status), userData.status)
-
-        ProfileProperty(stringResource(R.string.twitter), userData.twitter, isLink = true)
-
-        userData.timeZone?.let {
-            ProfileProperty(stringResource(R.string.timezone), userData.timeZone)
+        userData.qq?.let {
+            ProfileProperty(stringResource(id = R.string.qq), it)
+        }
+        userData.weChat?.let {
+            ProfileProperty(stringResource(id = R.string.wechat), it)
+        }
+        userData.github?.let {
+            ProfileProperty(stringResource(id = R.string.github), it, isLink = true)
         }
 
         // Add a spacer that always shows part (320.dp) of the fields list regardless of the device,
@@ -181,13 +182,13 @@ private fun ProfileHeader(
     val offset = (scrollState.value / 2)
     val offsetDp = with(LocalDensity.current) { offset.toDp() }
 
-    data.photo?.let {
+    data.getPhotoPainter()?.let {
         Image(
             modifier = Modifier
                 .heightIn(max = containerHeight / 2)
                 .fillMaxWidth()
                 .padding(top = offsetDp),
-            painter = painterResource(id = it),
+            painter = it,
             contentScale = ContentScale.Crop,
             contentDescription = null
         )
@@ -230,37 +231,38 @@ fun ProfileFab(
     modifier: Modifier = Modifier,
     onFabClicked: () -> Unit = { }
 ) {
-
-    key(userIsMe) { // Prevent multiple invocations to execute during composition
-        FloatingActionButton(
-            onClick = onFabClicked,
-            modifier = modifier
-                .padding(16.dp)
-                .navigationBarsPadding()
-                .height(48.dp)
-                .widthIn(min = 48.dp),
-            backgroundColor = MaterialTheme.colors.primary,
-            contentColor = MaterialTheme.colors.onPrimary
-        ) {
-            AnimatingFabContent(
-                icon = {
-                    Icon(
-                        imageVector = if (userIsMe) Icons.Outlined.Create else Icons.Outlined.Chat,
-                        contentDescription = stringResource(
-                            if (userIsMe) R.string.edit_profile else R.string.message
+    if (userIsMe) {
+        key(userIsMe) { // Prevent multiple invocations to execute during composition
+            FloatingActionButton(
+                onClick = onFabClicked,
+                modifier = modifier
+                    .padding(16.dp)
+                    .navigationBarsPadding()
+                    .height(48.dp)
+                    .widthIn(min = 48.dp),
+                backgroundColor = MaterialTheme.colors.primary,
+                contentColor = MaterialTheme.colors.onPrimary
+            ) {
+                AnimatingFabContent(
+                    icon = {
+                        Icon(
+                            imageVector = if (userIsMe) Icons.Outlined.Create else Icons.Outlined.Chat,
+                            contentDescription = stringResource(
+                                if (userIsMe) R.string.edit_profile else R.string.message
+                            )
                         )
-                    )
-                },
-                text = {
-                    Text(
-                        text = stringResource(
-                            id = if (userIsMe) R.string.edit_profile else R.string.message
-                        ),
-                    )
-                },
-                extended = extended
+                    },
+                    text = {
+                        Text(
+                            text = stringResource(
+                                id = if (userIsMe) R.string.edit_profile else R.string.message
+                            ),
+                        )
+                    },
+                    extended = extended
 
-            )
+                )
+            }
         }
     }
 }

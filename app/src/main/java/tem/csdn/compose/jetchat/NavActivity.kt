@@ -21,6 +21,9 @@ import tem.csdn.compose.jetchat.conversation.LocalBackPressedDispatcher
 import tem.csdn.compose.jetchat.databinding.ContentMainBinding
 import com.google.accompanist.insets.ProvideWindowInsets
 import kotlinx.coroutines.launch
+import tem.csdn.compose.jetchat.data.chatData
+import tem.csdn.compose.jetchat.data.colleagueProfile
+import tem.csdn.compose.jetchat.data.meProfile
 
 /**
  * Main activity for the app.
@@ -72,12 +75,14 @@ class NavActivity : AppCompatActivity() {
                             }
                         },
                         onProfileClicked = {
-                            val bundle = bundleOf("userId" to it)
+                            val bundle = bundleOf("profile" to it)
                             findNavController().navigate(R.id.nav_profile, bundle)
                             scope.launch {
                                 scaffoldState.drawerState.close()
                             }
-                        }
+                        },
+                        chat = chatData,
+                        profiles = listOf(meProfile, colleagueProfile)
                     ) {
                         AndroidViewBinding(ContentMainBinding::inflate)
                     }

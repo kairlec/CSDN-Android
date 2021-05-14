@@ -13,8 +13,9 @@ object Libs {
     const val material = "com.google.android.material:material:1.3.0"
 
     object Accompanist {
-        private const val version = "0.9.0"
+        private const val version = "0.9.1"
         const val insets = "com.google.accompanist:accompanist-insets:$version"
+        const val glide = "com.google.accompanist:accompanist-glide:$version"
     }
 
     object Kotlin {

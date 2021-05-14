@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
+import tem.csdn.compose.jetchat.data.OnlineData
 
 // Regex containing the syntax tokens
 val symbolPattern by lazy {
@@ -94,21 +95,29 @@ private fun getSymbolAnnotation(
     codeSnippetBackground: Color
 ): SymbolAnnotation {
     return when (matchResult.value.first()) {
-        '@' -> SymbolAnnotation(
-            AnnotatedString(
-                text = matchResult.value,
-                spanStyle = SpanStyle(
-                    color = colors.primary,
-                    fontWeight = FontWeight.Bold
+        '@' -> {
+            val userId = matchResult.value.substring(1)
+            val profile = OnlineData.getProfileOrNull(userId)
+            if (profile == null) {
+                SymbolAnnotation(AnnotatedString(matchResult.value), null)
+            } else {
+                SymbolAnnotation(
+                    AnnotatedString(
+                        text = "@${profile.displayName}",
+                        spanStyle = SpanStyle(
+                            color = colors.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    ),
+                    StringAnnotation(
+                        item = userId,
+                        start = matchResult.range.first,
+                        end = matchResult.range.first + profile.displayName.length,
+                        tag = SymbolAnnotationType.PERSON.name
+                    )
                 )
-            ),
-            StringAnnotation(
-                item = matchResult.value.substring(1),
-                start = matchResult.range.first,
-                end = matchResult.range.last,
-                tag = SymbolAnnotationType.PERSON.name
-            )
-        )
+            }
+        }
         '*' -> SymbolAnnotation(
             AnnotatedString(
                 text = matchResult.value.trim('*'),

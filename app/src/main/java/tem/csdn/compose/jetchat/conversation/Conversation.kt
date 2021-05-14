@@ -1,5 +1,7 @@
 package tem.csdn.compose.jetchat.conversation
 
+import android.text.format.DateFormat
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
@@ -46,10 +48,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LastBaseline
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -65,6 +67,10 @@ import com.google.accompanist.insets.navigationBarsWithImePadding
 import com.google.accompanist.insets.statusBarsPadding
 import com.google.accompanist.insets.toPaddingValues
 import kotlinx.coroutines.launch
+import tem.csdn.compose.jetchat.data.OnlineData
+import tem.csdn.compose.jetchat.data.meProfile
+import tem.csdn.compose.jetchat.profile.ProfileScreenState
+import java.time.*
 
 /**
  * Entry point for a conversation screen.
@@ -77,13 +83,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun ConversationContent(
     uiState: ConversationUiState,
-    navigateToProfile: (String) -> Unit,
+    navigateToProfile: (ProfileScreenState) -> Unit,
     modifier: Modifier = Modifier,
     onNavIconPressed: () -> Unit = { }
 ) {
-    val authorMe = stringResource(R.string.author_me)
-    val timeNow = stringResource(id = R.string.now)
-
     val scrollState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -99,7 +102,8 @@ fun ConversationContent(
                 UserInput(
                     onMessageSent = { content ->
                         uiState.addMessage(
-                            Message(authorMe, content, timeNow)
+                            // TODO SendMessage
+                            Message(meProfile, "-1", content, System.currentTimeMillis())
                         )
                     },
                     resetScroll = {
@@ -187,14 +191,18 @@ const val ConversationTestTag = "ConversationTestTag"
 @Composable
 fun Messages(
     messages: List<Message>,
-    navigateToProfile: (String) -> Unit,
+    navigateToProfile: (ProfileScreenState) -> Unit,
     scrollState: LazyListState,
     modifier: Modifier = Modifier
 ) {
+    val today = LocalDateTime.of(LocalDate.now(), LocalTime.MIN)
+    val yesterday = today.plusDays(-1)
+    val beforeYesterday = yesterday.plusDays(-1)
+    val thisYear = today.withDayOfYear(1)
     val scope = rememberCoroutineScope()
+
     Box(modifier = modifier) {
 
-        val authorMe = stringResource(id = R.string.author_me)
         LazyColumn(
             reverseLayout = true,
             state = scrollState,
@@ -208,32 +216,98 @@ fun Messages(
                 .testTag(ConversationTestTag)
                 .fillMaxSize()
         ) {
+            var nextDraw = false
             for (index in messages.indices) {
-                val prevAuthor = messages.getOrNull(index - 1)?.author
-                val nextAuthor = messages.getOrNull(index + 1)?.author
+                val prevMessage = messages.getOrNull(index - 1)
+                val nextMessage = messages.getOrNull(index + 1)
                 val content = messages[index]
+                val prevAuthor = prevMessage?.author
+                val nextAuthor = nextMessage?.author
                 val isFirstMessageByAuthor = prevAuthor != content.author
                 val isLastMessageByAuthor = nextAuthor != content.author
 
                 // Hardcode day dividers for simplicity
-                if (index == messages.size - 1) {
+                val msgTime =
+                    LocalDateTime.ofEpochSecond(content.timestamp, 0, OffsetDateTime.now().offset)
+
+                fun draw() {
                     item {
-                        DayHeader("20 Aug")
-                    }
-                } else if (index == 2) {
-                    item {
-                        DayHeader("Today")
+                        when {
+                            msgTime.isAfter(today) -> {
+
+                                DayHeader(dayString = stringResource(id = R.string.today))
+                            }
+                            msgTime.isAfter(yesterday) -> {
+                                DayHeader(dayString = stringResource(id = R.string.yesterday))
+                            }
+                            msgTime.isAfter(beforeYesterday) -> {
+                                DayHeader(dayString = stringResource(id = R.string.before_yesterday))
+                            }
+                            msgTime.isAfter(thisYear) -> {
+                                DayHeader(
+                                    dayString = stringResource(
+                                        id = R.string.this_year_format,
+                                        msgTime.monthValue,
+                                        msgTime.dayOfMonth
+                                    )
+                                )
+                            }
+                            else -> {
+                                DayHeader(
+                                    dayString = stringResource(
+                                        id = R.string.previous_year_format,
+                                        msgTime.year,
+                                        msgTime.monthValue,
+                                        msgTime.dayOfMonth
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
-
                 item {
+                    val msgTimeString = if (DateFormat.is24HourFormat(LocalContext.current)) {
+                        "%02d:%02d".format(msgTime.hour, msgTime.minute)
+                    } else {
+                        val (ap, hour) = stringResource(
+                            if (msgTime.hour >= 12) {
+                                R.string.pm_time_format
+                            } else {
+                                R.string.am_time_format
+                            }
+                        ) to msgTime.hour - 12
+                        "%s %02d:%02d".format(ap, hour, msgTime.minute)
+                    }
                     Message(
-                        onAuthorClick = { name -> navigateToProfile(name) },
+                        onAuthorClick = { profile -> navigateToProfile(profile) },
                         msg = content,
-                        isUserMe = content.author == authorMe,
+                        isUserMe = content.author.isMe(),
                         isFirstMessageByAuthor = isFirstMessageByAuthor,
-                        isLastMessageByAuthor = isLastMessageByAuthor
+                        isLastMessageByAuthor = isLastMessageByAuthor,
+                        msgTimeString = msgTimeString
                     )
+                }
+                if (nextMessage == null) {
+                    draw()
+                } else {
+                    if (nextDraw && nextMessage.author.userId != content.author.userId) {
+                        draw()
+                        nextDraw = false
+                    } else {
+                        val nextMsgTime =
+                            LocalDateTime.ofEpochSecond(
+                                nextMessage.timestamp,
+                                0,
+                                OffsetDateTime.now().offset
+                            )
+                        if (nextMsgTime.toLocalDate() != msgTime.toLocalDate()) {
+                            if (nextMessage.author.userId == content.author.userId) {
+                                nextDraw = true
+                            } else {
+                                draw()
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -248,7 +322,7 @@ fun Messages(
         val jumpToBottomButtonEnabled by remember {
             derivedStateOf {
                 scrollState.firstVisibleItemIndex != 0 ||
-                    scrollState.firstVisibleItemScrollOffset > jumpThreshold
+                        scrollState.firstVisibleItemScrollOffset > jumpThreshold
             }
         }
 
@@ -267,11 +341,12 @@ fun Messages(
 
 @Composable
 fun Message(
-    onAuthorClick: (String) -> Unit,
+    onAuthorClick: (ProfileScreenState) -> Unit,
     msg: Message,
     isUserMe: Boolean,
     isFirstMessageByAuthor: Boolean,
-    isLastMessageByAuthor: Boolean
+    isLastMessageByAuthor: Boolean,
+    msgTimeString: String
 ) {
     val borderColor = if (isUserMe) {
         MaterialTheme.colors.primary
@@ -292,7 +367,7 @@ fun Message(
                     .border(3.dp, MaterialTheme.colors.surface, CircleShape)
                     .clip(CircleShape)
                     .align(Alignment.Top),
-                painter = painterResource(id = msg.authorImage),
+                painter = msg.author.getPhotoPainterOrDefault(),
                 contentScale = ContentScale.Crop,
                 contentDescription = null,
             )
@@ -307,7 +382,8 @@ fun Message(
             authorClicked = onAuthorClick,
             modifier = Modifier
                 .padding(end = 16.dp)
-                .weight(1f)
+                .weight(1f),
+            msgTimeString = msgTimeString
         )
     }
 }
@@ -317,12 +393,13 @@ fun AuthorAndTextMessage(
     msg: Message,
     isFirstMessageByAuthor: Boolean,
     isLastMessageByAuthor: Boolean,
-    authorClicked: (String) -> Unit,
-    modifier: Modifier = Modifier
+    authorClicked: (ProfileScreenState) -> Unit,
+    modifier: Modifier = Modifier,
+    msgTimeString: String
 ) {
     Column(modifier = modifier) {
         if (isLastMessageByAuthor) {
-            AuthorNameTimestamp(msg)
+            AuthorNameTimestamp(msg, msgTimeString)
         }
         ChatItemBubble(msg, isFirstMessageByAuthor, authorClicked = authorClicked)
         if (isFirstMessageByAuthor) {
@@ -336,11 +413,11 @@ fun AuthorAndTextMessage(
 }
 
 @Composable
-private fun AuthorNameTimestamp(msg: Message) {
+private fun AuthorNameTimestamp(msg: Message, msgTimeString: String) {
     // Combine author and timestamp for a11y.
     Row(modifier = Modifier.semantics(mergeDescendants = true) {}) {
         Text(
-            text = msg.author,
+            text = msg.author.displayName,
             style = MaterialTheme.typography.subtitle1,
             modifier = Modifier
                 .alignBy(LastBaseline)
@@ -349,7 +426,7 @@ private fun AuthorNameTimestamp(msg: Message) {
         Spacer(modifier = Modifier.width(8.dp))
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
             Text(
-                text = msg.timestamp,
+                text = msgTimeString,
                 style = MaterialTheme.typography.caption,
                 modifier = Modifier.alignBy(LastBaseline)
             )
@@ -393,7 +470,7 @@ private fun RowScope.DayHeaderLine() {
 fun ChatItemBubble(
     message: Message,
     lastMessageByAuthor: Boolean,
-    authorClicked: (String) -> Unit
+    authorClicked: (ProfileScreenState) -> Unit
 ) {
 
     val backgroundBubbleColor =
@@ -412,11 +489,11 @@ fun ChatItemBubble(
             )
         }
 
-        message.image?.let {
+        message.getImagePainter()?.let {
             Spacer(modifier = Modifier.height(4.dp))
             Surface(color = backgroundBubbleColor, shape = bubbleShape) {
                 Image(
-                    painter = painterResource(it),
+                    painter = it,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.size(160.dp),
                     contentDescription = stringResource(id = R.string.attached_image)
@@ -427,7 +504,7 @@ fun ChatItemBubble(
 }
 
 @Composable
-fun ClickableMessage(message: Message, authorClicked: (String) -> Unit) {
+fun ClickableMessage(message: Message, authorClicked: (ProfileScreenState) -> Unit) {
     val uriHandler = LocalUriHandler.current
 
     val styledMessage = messageFormatter(text = message.content)
@@ -443,7 +520,11 @@ fun ClickableMessage(message: Message, authorClicked: (String) -> Unit) {
                 ?.let { annotation ->
                     when (annotation.tag) {
                         SymbolAnnotationType.LINK.name -> uriHandler.openUri(annotation.item)
-                        SymbolAnnotationType.PERSON.name -> authorClicked(annotation.item)
+                        SymbolAnnotationType.PERSON.name -> authorClicked(
+                            OnlineData.getProfile(
+                                annotation.item
+                            )
+                        )
                         else -> Unit
                     }
                 }

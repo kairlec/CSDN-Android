@@ -26,8 +26,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import tem.csdn.compose.jetchat.R
@@ -35,21 +37,31 @@ import tem.csdn.compose.jetchat.data.colleagueProfile
 import tem.csdn.compose.jetchat.data.meProfile
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.statusBarsHeight
+import tem.csdn.compose.jetchat.chat.ChatDataScreenState
+import tem.csdn.compose.jetchat.data.chatData
+import tem.csdn.compose.jetchat.profile.ProfileScreenState
 
 @Composable
-fun ColumnScope.JetchatDrawer(onProfileClicked: (String) -> Unit, onChatClicked: (String) -> Unit) {
+fun ColumnScope.JetchatDrawer(
+    onProfileClicked: (ProfileScreenState) -> Unit,
+    onChatClicked: () -> Unit,
+    chat: ChatDataScreenState,
+    profiles: Iterable<ProfileScreenState>
+) {
     // Use statusBarsHeight() to add a spacer which pushes the drawer content
     // below the status bar (y-axis)
     Spacer(Modifier.statusBarsHeight())
     DrawerHeader()
     Divider()
-    DrawerItemHeader("Chats")
-    ChatItem("composers", true) { onChatClicked("composers") }
-    ChatItem("droidcon-nyc", false) { onChatClicked("droidcon-nyc") }
-    DrawerItemHeader("Recent Profiles")
-    ProfileItem("Ali Conors (you)", meProfile.photo) { onProfileClicked(meProfile.userId) }
-    ProfileItem("Taylor Brooks", colleagueProfile.photo) {
-        onProfileClicked(colleagueProfile.userId)
+    DrawerItemHeader(stringResource(id = R.string.chat_header))
+    ChatItem(chat.displayName, true) {
+        onChatClicked()
+    }
+    DrawerItemHeader(stringResource(id = R.string.profile_header))
+    profiles.forEach {
+        ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter()) {
+            onProfileClicked(it)
+        }
     }
 }
 
@@ -68,6 +80,7 @@ private fun DrawerHeader() {
         )
     }
 }
+
 @Composable
 private fun DrawerItemHeader(text: String) {
     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
@@ -115,7 +128,7 @@ private fun ChatItem(text: String, selected: Boolean, onChatClicked: () -> Unit)
 }
 
 @Composable
-private fun ProfileItem(text: String, @DrawableRes profilePic: Int?, onProfileClicked: () -> Unit) {
+private fun ProfileItem(text: String, profilePic: Painter?, onProfileClicked: () -> Unit) {
     Row(
         modifier = Modifier
             .height(48.dp)
@@ -126,10 +139,12 @@ private fun ProfileItem(text: String, @DrawableRes profilePic: Int?, onProfileCl
         verticalAlignment = CenterVertically
     ) {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-            val widthPaddingModifier = Modifier.padding(8.dp).size(24.dp)
+            val widthPaddingModifier = Modifier
+                .padding(8.dp)
+                .size(24.dp)
             if (profilePic != null) {
                 Image(
-                    painter = painterResource(id = profilePic),
+                    painter = profilePic,
                     modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
                     contentScale = ContentScale.Crop,
                     contentDescription = null
@@ -148,18 +163,19 @@ fun DrawerPreview() {
     JetchatTheme {
         Surface {
             Column {
-                JetchatDrawer({}, {})
+                JetchatDrawer({}, {}, chatData, listOf(meProfile, colleagueProfile))
             }
         }
     }
 }
+
 @Composable
 @Preview
 fun DrawerPreviewDark() {
     JetchatTheme(isDarkTheme = true) {
         Surface {
             Column {
-                JetchatDrawer({}, {})
+                JetchatDrawer({}, {}, chatData, listOf(meProfile, colleagueProfile))
             }
         }
     }
