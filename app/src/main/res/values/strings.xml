@@ -1,54 +1,52 @@
 <resources>
     <string name="app_name">Jetchat</string>
 
-    <string name="navigation_drawer_open">Open navigation drawer</string>
-    <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title">Composer</string>
+    <string name="navigation_drawer_open">打开导航栏</string>
+    <string name="navigation_drawer_close">关闭导航栏</string>
+    <string name="nav_header_title">CSDN聊天群</string>
     <string name="nav_header_subtitle">android.studio@android.com</string>
-    <string name="nav_header_desc">Navigation header</string>
-    <string name="action_settings">Settings</string>
+    <string name="nav_header_desc">导航栏</string>
+    <string name="action_settings">设置</string>
 
-    <string name="menu_home">Home</string>
-    <string name="menu_gallery">Gallery</string>
-    <string name="menu_slideshow">Slideshow</string>
-    <string name="conversations">Conversations</string>
-    <string name="profile">Profile</string>
-    <string name="jumpBottom">Jump to bottom</string>
-    <string name="send">Send</string>
-    <string name="author_me">me</string>
+    <string name="menu_home">主页</string>
+    <string name="menu_gallery">库</string>
+    <string name="menu_slideshow">幻灯片</string>
+    <string name="conversations">语音通话</string>
+    <string name="profile">配置文件</string>
+    <string name="jumpBottom">下滑查看更多消息</string>
+    <string name="send">发送</string>
+    <string name="author_me">我</string>
     <string name="now">8:30 PM</string>
-    <string name="members">%d members</string>
-    <string name="textfield_hint">Message #composers</string>
-    <string name="emojis_label">Emojis</string>
-    <string name="stickers_label">Stickers</string>
+    <string name="members">%d 名成员</string>
+    <string name="textfield_hint">请输入发送内容</string>
+    <string name="emojis_label">表情</string>
+    <string name="stickers_label">贴纸</string>
 
-    <string name="message">Message</string>
-    <string name="edit_profile">Edit Profile</string>
-    <string name="profile_error">There was an error loading the profile</string>
+    <string name="message">消息</string>
+    <string name="edit_profile">编辑用户信息</string>
+    <string name="profile_error">信息修改有误</string>
     <string name="bio">Bio</string>
-    <string name="display_name">Display name</string>
-    <string name="status">Status</string>
-    <string name="timezone">Timezone</string>
-    <string name="twitter">Twitter</string>
-    <string name="common_channels">Channels in common</string>
-    <string name="lorem">Lorem or Ipsum</string>
+    <string name="display_name">用户名</string>
+    <string name="status">状态</string>
+    <string name="timezone">时区</string>
+    <string name="twitter">推特</string>
 
     <!-- Accessibility descriptions -->
 
-    <string name="emoji_selector_desc">Emoji selector</string>
-    <string name="emoji_selector_bt_desc">Show Emoji selector</string>
-    <string name="dm_desc">Direct Message</string>
-    <string name="attach_photo_desc">Attach Photo</string>
-    <string name="map_selector_desc">Location selector</string>
-    <string name="videochat_desc">Start videochat</string>
-    <string name="textfield_desc">Text input</string>
-    <string name="not_available">Functionality currently not available</string>
-    <string name="not_available_subtitle">Grab a beverage and check back later!</string>
-    <string name="back">Navigate up</string>
-    <string name="attached_image">Attached image</string>
-    <string name="search">Search</string>
-    <string name="info">Information</string>
-    <string name="more_options">More options</string>
+    <string name="emoji_selector_desc">选择表情</string>
+    <string name="emoji_selector_bt_desc">展示所有表情</string>
+    <string name="dm_desc">提示信息</string>
+    <string name="attach_photo_desc">添加照片</string>
+    <string name="map_selector_desc">选择位置</string>
+    <string name="videochat_desc">视频通话</string>
+    <string name="textfield_desc">文本输入</string>
+    <string name="not_available">当前功能不可用</string>
+    <string name="not_available_subtitle">开发中,敬请期待</string>
+    <string name="back">返回</string>
+    <string name="attached_image">发送图像</string>
+    <string name="search">搜索</string>
+    <string name="info">信息</string>
+    <string name="more_options">更多选项</string>
 
 
     <string name="profile_header">成员</string>
