@@ -31,35 +31,33 @@ class ProfileViewModel : ViewModel() {
 
 @Immutable
 data class ProfileScreenState(
-    val userId: String,
-    val photo: String?,
+    val displayId: String,
     val name: String,
     val displayName: String,
     val position: String,
+    val photo: Boolean?,
     val github: String?,
     val qq: String?,
-    val weChat: String?
+    val weChat: String?,
 ) : Serializable {
     companion object {
         private const val serialVersionUID = 47073173576278320L
+        lateinit var meProfile: ProfileScreenState
     }
 
-    fun isMe() = userId == meProfile.userId
+    fun isMe() = displayId == meProfile.displayId
 
     @Composable
-    fun getPhotoPainter(): Painter? {
-        if (photo == null) {
-            return null
-        }
-        return if (photo.startsWith("http")) {
-            avatarImage(url = photo)
+    fun getPhotoPainter(chatAPI: ChatAPI): Painter? {
+        return if (photo == true) {
+            avatarImage(url = chatAPI.image(ChatAPI.ImageType.PHOTO, displayId))
         } else {
-            photo.toIntOrNull()?.let { painterResource(id = it) }
+            null
         }
     }
 
     @Composable
-    fun getPhotoPainterOrDefault(): Painter {
-        return getPhotoPainter() ?: painterResource(id = R.drawable.ic_default_avatar_man)
+    fun getPhotoPainterOrDefault(chatAPI: ChatAPI): Painter {
+        return getPhotoPainter(chatAPI) ?: painterResource(id = R.drawable.ic_default_avatar_man)
     }
 }
