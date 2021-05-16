@@ -69,7 +69,7 @@ import com.google.accompanist.insets.toPaddingValues
 import kotlinx.coroutines.launch
 import tem.csdn.compose.jetchat.data.OnlineData
 import tem.csdn.compose.jetchat.data.meProfile
-import tem.csdn.compose.jetchat.profile.ProfileScreenState
+import tem.csdn.compose.jetchat.model.User
 import java.time.*
 
 /**
@@ -83,7 +83,7 @@ import java.time.*
 @Composable
 fun ConversationContent(
     uiState: ConversationUiState,
-    navigateToProfile: (ProfileScreenState) -> Unit,
+    navigateToProfile: (User) -> Unit,
     modifier: Modifier = Modifier,
     onNavIconPressed: () -> Unit = { }
 ) {
@@ -101,10 +101,7 @@ fun ConversationContent(
                 )
                 UserInput(
                     onMessageSent = { content ->
-                        uiState.addMessage(
-                            // TODO SendMessage
-                            Message(meProfile, "-1", content, System.currentTimeMillis())
-                        )
+                        uiState.addMessage(content)
                     },
                     resetScroll = {
                         scope.launch {
@@ -191,7 +188,7 @@ const val ConversationTestTag = "ConversationTestTag"
 @Composable
 fun Messages(
     messages: List<Message>,
-    navigateToProfile: (ProfileScreenState) -> Unit,
+    navigateToProfile: (User) -> Unit,
     scrollState: LazyListState,
     modifier: Modifier = Modifier
 ) {
@@ -290,7 +287,7 @@ fun Messages(
                 if (nextMessage == null) {
                     draw()
                 } else {
-                    if (nextDraw && nextMessage.author.userId != content.author.userId) {
+                    if (nextDraw && nextMessage.author.displayId != content.author.displayId) {
                         draw()
                         nextDraw = false
                     } else {
@@ -301,7 +298,7 @@ fun Messages(
                                 OffsetDateTime.now().offset
                             )
                         if (nextMsgTime.toLocalDate() != msgTime.toLocalDate()) {
-                            if (nextMessage.author.userId == content.author.userId) {
+                            if (nextMessage.author.displayId == content.author.displayId) {
                                 nextDraw = true
                             } else {
                                 draw()
@@ -341,7 +338,7 @@ fun Messages(
 
 @Composable
 fun Message(
-    onAuthorClick: (ProfileScreenState) -> Unit,
+    onAuthorClick: (User) -> Unit,
     msg: Message,
     isUserMe: Boolean,
     isFirstMessageByAuthor: Boolean,

@@ -1,6 +1,5 @@
 package tem.csdn.compose.jetchat.components
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,14 +38,14 @@ import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.statusBarsHeight
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.data.chatData
-import tem.csdn.compose.jetchat.profile.ProfileScreenState
+import tem.csdn.compose.jetchat.model.User
 
 @Composable
 fun ColumnScope.JetchatDrawer(
-    onProfileClicked: (ProfileScreenState) -> Unit,
+    onProfileClicked: (User) -> Unit,
     onChatClicked: () -> Unit,
     chat: ChatDataScreenState,
-    profiles: Iterable<ProfileScreenState>
+    profiles: Iterable<User>
 ) {
     // Use statusBarsHeight() to add a spacer which pushes the drawer content
     // below the status bar (y-axis)

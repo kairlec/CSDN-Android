@@ -24,7 +24,6 @@ class ChatViewModel : ViewModel() {
 
 @Immutable
 data class ChatDataScreenState(
-    val chatUrl: String,
     // 群聊图片(头像)
     val photo: String?,
     val displayName: String,

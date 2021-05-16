@@ -25,6 +25,20 @@ object Libs {
         const val extensions = "org.jetbrains.kotlin:kotlin-android-extensions:$version"
     }
 
+    object Ktor {
+        private const val version = "1.5.4"
+        const val android = "io.ktor:ktor-client-android:$version"
+        const val serialization = "io.ktor:ktor-client-serialization:$version"
+        const val logging = "io.ktor:ktor-client-logging-jvm:$version"
+        const val cio = "io.ktor:ktor-client-cio:$version"
+        const val websockets = "io.ktor:ktor-client-websockets:$version"
+    }
+
+    object KotlinX {
+        private const val version = "1.2.1"
+        const val serialization = "org.jetbrains.kotlinx:kotlinx-serialization-json:$version"
+    }
+
     object Coroutines {
         private const val version = "1.4.2"
         const val core = "org.jetbrains.kotlinx:kotlinx-coroutines-core:$version"
@@ -47,7 +61,8 @@ object Libs {
             const val foundation = "androidx.compose.foundation:foundation:$version"
             const val layout = "androidx.compose.foundation:foundation-layout:$version"
             const val material = "androidx.compose.material:material:$version"
-            const val materialIconsExtended = "androidx.compose.material:material-icons-extended:$version"
+            const val materialIconsExtended =
+                "androidx.compose.material:material-icons-extended:$version"
             const val runtime = "androidx.compose.runtime:runtime:$version"
             const val runtimeLivedata = "androidx.compose.runtime:runtime-livedata:$version"
             const val tooling = "androidx.compose.ui:ui-tooling:$version"
@@ -81,12 +96,27 @@ object Libs {
             const val extensions = "androidx.lifecycle:lifecycle-extensions:$version"
             const val livedata = "androidx.lifecycle:lifecycle-livedata-ktx:$version"
             const val viewmodel = "androidx.lifecycle:lifecycle-viewmodel-ktx:$version"
-            const val viewModelCompose = "androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha04"
+            const val viewModelCompose =
+                "androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha04"
+        }
+
+        object Ads {
+            private const val version = "1.0.0-alpha04"
+            const val identifier = "androidx.ads:ads-identifier:$version"
+        }
+
+        object Room {
+            private const val version = "2.3.0"
+            const val runtime = "androidx.room:room-runtime:$version"
+            const val kapt = "androidx.room:room-compiler:$version"
+            const val ktx = "androidx.room:room-ktx:$version"
+            const val testing = "androidx.room:room-testing:$version"
         }
     }
 }
 
 object Urls {
-    const val composeSnapshotRepo = "https://androidx.dev/snapshots/builds/${Libs.AndroidX.Compose.snapshot}/artifacts/repository/"
+    const val composeSnapshotRepo =
+        "https://androidx.dev/snapshots/builds/${Libs.AndroidX.Compose.snapshot}/artifacts/repository/"
     const val accompanistSnapshotRepo = "https://oss.sonatype.org/content/repositories/snapshots"
 }

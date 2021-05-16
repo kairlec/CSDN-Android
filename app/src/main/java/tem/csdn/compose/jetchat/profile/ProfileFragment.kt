@@ -16,6 +16,7 @@ import tem.csdn.compose.jetchat.MainViewModel
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ViewWindowInsetObserver
+import tem.csdn.compose.jetchat.model.User
 
 class ProfileFragment : Fragment() {
 
@@ -25,7 +26,7 @@ class ProfileFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         // Consider using safe args plugin
-        val profile = arguments?.getSerializable("profile") as? ProfileScreenState?
+        val profile = arguments?.getSerializable("profile") as? User?
         viewModel.setProfile(profile)
     }
 
