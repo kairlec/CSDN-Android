@@ -5,6 +5,7 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.theme.JetchatTheme
@@ -16,6 +17,7 @@ fun JetchatScaffold(
     onChatClicked: () -> Unit,
     chat: ChatDataScreenState,
     profiles: Iterable<User>,
+    chatAPI: ChatAPI,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     JetchatTheme {
@@ -26,7 +28,8 @@ fun JetchatScaffold(
                     onProfileClicked = onProfileClicked,
                     onChatClicked = onChatClicked,
                     chat = chat,
-                    profiles = profiles
+                    profiles = profiles,
+                    chatAPI = chatAPI
                 )
             },
             content = content

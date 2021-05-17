@@ -36,6 +36,7 @@ import tem.csdn.compose.jetchat.data.colleagueProfile
 import tem.csdn.compose.jetchat.data.meProfile
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.statusBarsHeight
+import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.data.chatData
 import tem.csdn.compose.jetchat.model.User
@@ -45,6 +46,7 @@ fun ColumnScope.JetchatDrawer(
     onProfileClicked: (User) -> Unit,
     onChatClicked: () -> Unit,
     chat: ChatDataScreenState,
+    chatAPI: ChatAPI,
     profiles: Iterable<User>
 ) {
     // Use statusBarsHeight() to add a spacer which pushes the drawer content
@@ -58,7 +60,7 @@ fun ColumnScope.JetchatDrawer(
     }
     DrawerItemHeader(stringResource(id = R.string.profile_header))
     profiles.forEach {
-        ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter()) {
+        ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter(chatAPI)) {
             onProfileClicked(it)
         }
     }
@@ -162,7 +164,13 @@ fun DrawerPreview() {
     JetchatTheme {
         Surface {
             Column {
-                JetchatDrawer({}, {}, chatData, listOf(meProfile, colleagueProfile))
+                JetchatDrawer(
+                    {},
+                    {},
+                    chatData,
+                    ChatAPI(""),
+                    listOf(meProfile, colleagueProfile)
+                )
             }
         }
     }
@@ -174,7 +182,7 @@ fun DrawerPreviewDark() {
     JetchatTheme(isDarkTheme = true) {
         Surface {
             Column {
-                JetchatDrawer({}, {}, chatData, listOf(meProfile, colleagueProfile))
+                JetchatDrawer({}, {}, chatData, ChatAPI(""), listOf(meProfile, colleagueProfile))
             }
         }
     }

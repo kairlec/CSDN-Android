@@ -52,9 +52,11 @@ import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.insets.statusBarsPadding
+import tem.csdn.compose.jetchat.chat.ChatAPI
+import tem.csdn.compose.jetchat.model.User
 
 @Composable
-fun ProfileScreen(userData: ProfileScreenState, onNavIconPressed: () -> Unit = { }) {
+fun ProfileScreen(userData: User, chatAPI: ChatAPI, onNavIconPressed: () -> Unit = { }) {
 
     var functionalityNotAvailablePopupShown by remember { mutableStateOf(false) }
     if (functionalityNotAvailablePopupShown) {
@@ -95,7 +97,8 @@ fun ProfileScreen(userData: ProfileScreenState, onNavIconPressed: () -> Unit = {
                     ProfileHeader(
                         scrollState,
                         userData,
-                        this@BoxWithConstraints.maxHeight
+                        this@BoxWithConstraints.maxHeight,
+                        chatAPI
                     )
                     UserInfoFields(userData, this@BoxWithConstraints.maxHeight)
                 }
@@ -111,7 +114,7 @@ fun ProfileScreen(userData: ProfileScreenState, onNavIconPressed: () -> Unit = {
 }
 
 @Composable
-private fun UserInfoFields(userData: ProfileScreenState, containerHeight: Dp) {
+private fun UserInfoFields(userData: User, containerHeight: Dp) {
     Column {
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -137,7 +140,7 @@ private fun UserInfoFields(userData: ProfileScreenState, containerHeight: Dp) {
 
 @Composable
 private fun NameAndPosition(
-    userData: ProfileScreenState
+    userData: User
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Name(
@@ -154,7 +157,7 @@ private fun NameAndPosition(
 }
 
 @Composable
-private fun Name(userData: ProfileScreenState, modifier: Modifier = Modifier) {
+private fun Name(userData: User, modifier: Modifier = Modifier) {
     Text(
         text = userData.name,
         modifier = modifier,
@@ -163,7 +166,7 @@ private fun Name(userData: ProfileScreenState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Position(userData: ProfileScreenState, modifier: Modifier = Modifier) {
+private fun Position(userData: User, modifier: Modifier = Modifier) {
     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
         Text(
             text = userData.position,
@@ -176,13 +179,14 @@ private fun Position(userData: ProfileScreenState, modifier: Modifier = Modifier
 @Composable
 private fun ProfileHeader(
     scrollState: ScrollState,
-    data: ProfileScreenState,
-    containerHeight: Dp
+    data: User,
+    containerHeight: Dp,
+    chatAPI: ChatAPI,
 ) {
     val offset = (scrollState.value / 2)
     val offsetDp = with(LocalDensity.current) { offset.toDp() }
 
-    data.getPhotoPainter()?.let {
+    data.getPhotoPainter(chatAPI)?.let {
         Image(
             modifier = Modifier
                 .heightIn(max = containerHeight / 2)
@@ -272,7 +276,7 @@ fun ProfileFab(
 fun ConvPreviewLandscapeMeDefault() {
     ProvideWindowInsets(consumeWindowInsets = false) {
         JetchatTheme {
-            ProfileScreen(meProfile)
+            ProfileScreen(meProfile, ChatAPI(""))
         }
     }
 }
@@ -282,7 +286,7 @@ fun ConvPreviewLandscapeMeDefault() {
 fun ConvPreviewPortraitMeDefault() {
     ProvideWindowInsets(consumeWindowInsets = false) {
         JetchatTheme {
-            ProfileScreen(meProfile)
+            ProfileScreen(meProfile, ChatAPI(""))
         }
     }
 }
@@ -292,7 +296,7 @@ fun ConvPreviewPortraitMeDefault() {
 fun ConvPreviewPortraitOtherDefault() {
     ProvideWindowInsets(consumeWindowInsets = false) {
         JetchatTheme {
-            ProfileScreen(colleagueProfile)
+            ProfileScreen(colleagueProfile,ChatAPI(""))
         }
     }
 }

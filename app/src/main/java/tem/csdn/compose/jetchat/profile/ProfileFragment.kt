@@ -16,6 +16,7 @@ import tem.csdn.compose.jetchat.MainViewModel
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ViewWindowInsetObserver
+import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.model.User
 
 class ProfileFragment : Fragment() {
@@ -23,10 +24,13 @@ class ProfileFragment : Fragment() {
     private val viewModel: ProfileViewModel by viewModels()
     private val activityViewModel: MainViewModel by activityViewModels()
 
+    private lateinit var chatAPI: ChatAPI
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
         // Consider using safe args plugin
         val profile = arguments?.getSerializable("profile") as? User?
+        chatAPI = arguments?.getSerializable("chatAPI") as ChatAPI
         viewModel.setProfile(profile)
     }
 
@@ -57,7 +61,8 @@ class ProfileFragment : Fragment() {
                             userData = userData!!,
                             onNavIconPressed = {
                                 activityViewModel.openDrawer()
-                            }
+                            },
+                            chatAPI = chatAPI
                         )
                     }
                 }

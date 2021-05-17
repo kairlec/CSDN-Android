@@ -24,6 +24,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.dao.AppDatabase
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.data.chatData
@@ -51,7 +52,7 @@ class NavActivity : AppCompatActivity() {
 
             var chatDisplayName by mutableStateOf("")
             var onlineNumbers by mutableStateOf(0)
-            val messages =
+            val chatAPI = ChatAPI("http://localhost:18080")
 
             GlobalScope.launch(Dispatchers.IO) {
                 val adId = adIdListener.get().id
@@ -63,7 +64,7 @@ class NavActivity : AppCompatActivity() {
                 val messageDao = db.messageDao()
                 val lastMessage = messageDao.getLast()
                 val userDao = db.userDao()
-                val chatServer = ChatServer("http://localhost:18080", adId, client, lastMessage?.id)
+                val chatServer = ChatServer(chatAPI, adId, client, lastMessage?.id)
                 val newMessages = chatServer.messages.map { it.toLocal() }
                 messageDao.update(*newMessages.toTypedArray())
                 val newProfiles = chatServer.profiles
@@ -115,20 +116,22 @@ class NavActivity : AppCompatActivity() {
                     JetchatScaffold(
                         scaffoldState,
                         onChatClicked = {
+                            val bundle = bundleOf("a" to "b")
                             findNavController().popBackStack(R.id.nav_home, true)
                             scope.launch {
                                 scaffoldState.drawerState.close()
                             }
                         },
                         onProfileClicked = {
-                            val bundle = bundleOf("profile" to it)
+                            val bundle = bundleOf("profile" to it, "chatAPI" to chatAPI)
                             findNavController().navigate(R.id.nav_profile, bundle)
                             scope.launch {
                                 scaffoldState.drawerState.close()
                             }
                         },
                         chat = chatData,
-                        profiles = listOf(meProfile, colleagueProfile)
+                        profiles = listOf(meProfile, colleagueProfile),
+                        chatAPI = chatAPI
                     ) {
                         AndroidViewBinding(ContentMainBinding::inflate)
                     }

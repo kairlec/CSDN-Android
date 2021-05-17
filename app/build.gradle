@@ -82,6 +82,8 @@ dependencies {
     implementation Libs.Ktor.websockets
 
     implementation Libs.Kotlin.stdlib
+    implementation Libs.Kotlin.stdlib_jdk8
+    implementation Libs.Kotlin.common
     implementation Libs.Coroutines.android
 
     implementation Libs.AndroidX.Ads.identifier

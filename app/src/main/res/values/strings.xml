@@ -56,24 +56,13 @@
     <string name="wechat">微信号</string>
     <string name="github">Github</string>
 
-    <string name="today_time_format">%02d:%02d</string>
     <string name="today">今天</string>
-    <string name="yesterday_time_format">昨天 %02d:%02d</string>
     <string name="yesterday">昨天</string>
-    <string name="before_yesterday_time_format">前天 %02d:%02d</string>
     <string name="before_yesterday">前天</string>
-    <string name="this_year_time_format">%02d月%02d日 %02d:%02d</string>
-    <string name="this_year_format">%02d月%02d日</string>
-    <string name="previous_year_time_format">%02d年%02d月%02d日 %02d:%02d</string>
-    <string name="previous_year_format">%04d年%02d月%02d日</string>
+    <string name="this_year_format">%1$02d月%2$02d日</string>
+    <string name="previous_year_format">%1$04d年%2$02d月%3$02d日</string>
 
     <string name="pm_time_format">下午</string>
     <string name="am_time_format">上午</string>
-
-    <string name="today_time_format_12">%s %02d:%02d</string>
-    <string name="yesterday_time_format_12">昨天%s %02d:%02d</string>
-    <string name="before_yesterday_time_format_12">前天%s %02d:%02d</string>
-    <string name="this_year_time_format_12">%02d月%02d日%s %02d:%02d</string>
-    <string name="previous_year_time_format_12">%04d年%02d月%02d日%s %02d:%02d</string>
 
 </resources>

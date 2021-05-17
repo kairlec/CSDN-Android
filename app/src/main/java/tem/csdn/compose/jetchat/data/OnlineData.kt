@@ -1,34 +1,12 @@
 package tem.csdn.compose.jetchat.data
 
 import io.ktor.client.*
-import io.ktor.client.features.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import kotlinx.coroutines.runBlocking
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import java.lang.Exception
-import java.util.*
-
-object OnlineData {
-    fun getProfile(userId: String): User {
-        return if (userId == meProfile.userId) {
-            meProfile
-        } else {
-            colleagueProfile
-        }
-    }
-
-    fun getProfileOrNull(userId: String): User? {
-        return if (userId == meProfile.userId) {
-            meProfile
-        } else {
-            colleagueProfile
-        }
-    }
-
-}
 
 class ChatServerInitException(
     val code: Int = -1,
@@ -36,7 +14,7 @@ class ChatServerInitException(
     override val cause: Throwable? = null
 ) : Exception(message, cause)
 
-class ChatServer(chatBaseUrl: String, id: String, client: HttpClient, lastMessageId: Long?) {
+class ChatServer(chatAPI: ChatAPI, id: String, client: HttpClient, lastMessageId: Long?) {
     data class WebSocketFrameWrapper(
         val type: FrameType,
         val content: Any
@@ -48,7 +26,6 @@ class ChatServer(chatBaseUrl: String, id: String, client: HttpClient, lastMessag
         }
     }
 
-    private val chatAPI = ChatAPI(chatBaseUrl)
     val chatDisplayName: String
     val meProfile: User
     val profiles: List<User>
