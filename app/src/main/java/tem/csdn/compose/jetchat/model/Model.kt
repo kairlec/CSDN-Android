@@ -7,6 +7,7 @@ import androidx.room.*
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.conversation.avatarImage
+import tem.csdn.compose.jetchat.data.ChatServer
 import java.io.Serializable
 
 data class Message(
@@ -32,10 +33,9 @@ data class User(
 ) : Serializable, Comparable<User> {
     companion object {
         private const val serialVersionUID = 47073173576278320L
-        lateinit var meProfile: User
     }
 
-    fun isMe() = displayId == meProfile.displayId
+    fun isMe() = displayId == ChatServer.currentChatServer.meProfile.displayId
 
     @Composable
     fun getPhotoPainter(chatAPI: ChatAPI): Painter? {

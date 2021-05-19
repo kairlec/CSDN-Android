@@ -3,7 +3,6 @@ package tem.csdn.compose.jetchat.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -157,33 +156,33 @@ private fun ProfileItem(text: String, profilePic: Painter?, onProfileClicked: ()
         }
     }
 }
-
-@Composable
-@Preview
-fun DrawerPreview() {
-    JetchatTheme {
-        Surface {
-            Column {
-                JetchatDrawer(
-                    {},
-                    {},
-                    chatData,
-                    ChatAPI(""),
-                    listOf(meProfile, colleagueProfile)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-@Preview
-fun DrawerPreviewDark() {
-    JetchatTheme(isDarkTheme = true) {
-        Surface {
-            Column {
-                JetchatDrawer({}, {}, chatData, ChatAPI(""), listOf(meProfile, colleagueProfile))
-            }
-        }
-    }
-}
+//
+//@Composable
+//@Preview
+//fun DrawerPreview() {
+//    JetchatTheme {
+//        Surface {
+//            Column {
+//                JetchatDrawer(
+//                    {},
+//                    {},
+//                    chatData,
+//                    ChatAPI(""),
+//                    listOf(meProfile, colleagueProfile)
+//                )
+//            }
+//        }
+//    }
+//}
+//
+//@Composable
+//@Preview
+//fun DrawerPreviewDark() {
+//    JetchatTheme(isDarkTheme = true) {
+//        Surface {
+//            Column {
+//                JetchatDrawer({}, {}, chatData, ChatAPI(""), listOf(meProfile, colleagueProfile))
+//            }
+//        }
+//    }
+//}

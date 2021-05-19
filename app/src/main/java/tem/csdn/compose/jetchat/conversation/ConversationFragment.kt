@@ -2,7 +2,6 @@ package tem.csdn.compose.jetchat.conversation
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,20 +21,15 @@ import com.google.accompanist.insets.ExperimentalAnimatedInsets
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ViewWindowInsetObserver
 import com.google.accompanist.insets.navigationBarsPadding
-import tem.csdn.compose.jetchat.chat.ChatAPI
+import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.data.exampleUiState
-import tem.csdn.compose.jetchat.model.User
 
 class ConversationFragment : Fragment() {
 
     private val activityViewModel: MainViewModel by activityViewModels()
-    private lateinit var chatAPI: ChatAPI
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        val profile = arguments?.getString("a")
-        chatAPI = arguments?.getSerializable("chatAPI") as ChatAPI
-        Log.i("CSDN-TEST", profile ?: "error to get a in fragment")
     }
 
     @OptIn(ExperimentalAnimatedInsets::class) // Opt-in to experiment animated insets support
@@ -65,7 +59,7 @@ class ConversationFragment : Fragment() {
                         uiState = exampleUiState,
                         navigateToProfile = { user ->
                             // Click callback
-                            val bundle = bundleOf("profile" to user, "chatAPI" to chatAPI)
+                            val bundle = bundleOf("profile" to user, "chatAPI" to ChatServer.currentChatServer.chatAPI)
                             findNavController().navigate(
                                 R.id.nav_profile,
                                 bundle
@@ -77,7 +71,7 @@ class ConversationFragment : Fragment() {
                         // Add padding so that we are inset from any left/right navigation bars
                         // (usually shown when in landscape orientation)
                         modifier = Modifier.navigationBarsPadding(bottom = false),
-                        chatAPI = ChatAPI(""),
+                        chatAPI = ChatServer.currentChatServer.chatAPI,
                         getProfile = { null }
                     )
                 }

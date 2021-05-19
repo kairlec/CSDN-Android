@@ -46,8 +46,6 @@ import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.components.AnimatingFabContent
 import tem.csdn.compose.jetchat.components.JetchatAppBar
 import tem.csdn.compose.jetchat.components.baselineHeight
-import tem.csdn.compose.jetchat.data.colleagueProfile
-import tem.csdn.compose.jetchat.data.meProfile
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsPadding
@@ -271,35 +269,35 @@ fun ProfileFab(
     }
 }
 
-@Preview(widthDp = 640, heightDp = 360)
-@Composable
-fun ConvPreviewLandscapeMeDefault() {
-    ProvideWindowInsets(consumeWindowInsets = false) {
-        JetchatTheme {
-            ProfileScreen(meProfile, ChatAPI(""))
-        }
-    }
-}
-
-@Preview(widthDp = 360, heightDp = 480)
-@Composable
-fun ConvPreviewPortraitMeDefault() {
-    ProvideWindowInsets(consumeWindowInsets = false) {
-        JetchatTheme {
-            ProfileScreen(meProfile, ChatAPI(""))
-        }
-    }
-}
-
-@Preview(widthDp = 360, heightDp = 480)
-@Composable
-fun ConvPreviewPortraitOtherDefault() {
-    ProvideWindowInsets(consumeWindowInsets = false) {
-        JetchatTheme {
-            ProfileScreen(colleagueProfile,ChatAPI(""))
-        }
-    }
-}
+//@Preview(widthDp = 640, heightDp = 360)
+//@Composable
+//fun ConvPreviewLandscapeMeDefault() {
+//    ProvideWindowInsets(consumeWindowInsets = false) {
+//        JetchatTheme {
+//            ProfileScreen(meProfile, ChatAPI(""))
+//        }
+//    }
+//}
+//
+//@Preview(widthDp = 360, heightDp = 480)
+//@Composable
+//fun ConvPreviewPortraitMeDefault() {
+//    ProvideWindowInsets(consumeWindowInsets = false) {
+//        JetchatTheme {
+//            ProfileScreen(meProfile, ChatAPI(""))
+//        }
+//    }
+//}
+//
+//@Preview(widthDp = 360, heightDp = 480)
+//@Composable
+//fun ConvPreviewPortraitOtherDefault() {
+//    ProvideWindowInsets(consumeWindowInsets = false) {
+//        JetchatTheme {
+//            ProfileScreen(colleagueProfile,ChatAPI(""))
+//        }
+//    }
+//}
 
 @Preview
 @Composable

@@ -1,6 +1,13 @@
 package tem.csdn.compose.jetchat.chat
 
-class ChatAPI(private val baseUrl: String) {
+import java.io.Serializable
+
+class ChatAPI(ssl: Boolean,val host: String,val port: Int) : Serializable {
+    private val baseUrl = "${if (ssl) "https" else "http"}://${host}:${port}"
+    companion object {
+        private const val serialVersionUID = 13546100697343249L
+    }
+
     enum class ImageType(val method: String) {
         PHOTO("photo"),
         IMAGE("image"),

@@ -2,19 +2,24 @@ package tem.csdn.compose.jetchat.util
 
 import android.util.Log
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.*
+import io.ktor.client.features.cookies.*
+import io.ktor.client.features.json.*
 import io.ktor.client.features.websocket.*
-import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 
-val client = HttpClient {
+val client = HttpClient(CIO) {
     install(WebSockets)
+    install(JsonFeature)
+    install(HttpCookies) {
+        storage = AcceptAllCookiesStorage()
+    }
 }
 
 suspend fun connectWebSocketToServer(
@@ -23,23 +28,27 @@ suspend fun connectWebSocketToServer(
     path: String = "/",
     method: HttpMethod = HttpMethod.Get,
     inputMessageChannel: Channel<String>,
-    onReceiveMessageEvent: (String) -> Unit
+    outputMessageChannel: Channel<String>,
+    onConnected: suspend () -> Unit,
+    onDisconnected: suspend () -> Unit,
 ) {
     client.webSocket(method = method, host = host, port = port, path = path) {
-        val messageOutputRoutine = launch { outputMessages(onReceiveMessageEvent) }
+        onConnected()
+        val messageOutputRoutine = launch { outputMessages(outputMessageChannel) }
         val userInputRoutine = launch { inputMessages(inputMessageChannel) }
 
         userInputRoutine.join()
         messageOutputRoutine.cancelAndJoin()
     }
+    onDisconnected()
     client.close()
 }
 
-suspend fun DefaultClientWebSocketSession.outputMessages(onReceiveMessageEvent: (String) -> Unit) {
+suspend fun DefaultClientWebSocketSession.outputMessages(outputMessageChannel: Channel<String>) {
     try {
         for (message in incoming) {
             message as? Frame.Text ?: continue
-            onReceiveMessageEvent(message.readText())
+            outputMessageChannel.send(message.readText())
         }
     } catch (e: Throwable) {
         Log.e("CSDN_WEBSOCKET_RECEIVE", "Error while receiving: ${e.localizedMessage}", e)
