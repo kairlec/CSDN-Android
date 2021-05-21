@@ -104,27 +104,20 @@ class ChatServer(
 
     private fun init() {
         runBlocking {
-        meProfile = runBlocking { client.post<Result<User>>(chatAPI.init(id)).checked().data!! }
-        Log.d("CSDN_DEBUG", "init for me profile:${meProfile}")
-        chatDisplayName =
-             client.get<Result<String>>(chatAPI.chatName()).checked().data!! }
-        Log.d("CSDN_DEBUG", "init for chat display name:${chatDisplayName}")
-        profiles =
-            runBlocking { client.get<Result<List<User>>>(chatAPI.profiles()).checked().data!! }
-        Log.d("CSDN_DEBUG", "init for profiles:${profiles}")
-        count = client.get<Result<Int>>(chatAPI.count()).checked().data!!.apply {
-                
-            }
-        }
-
-        messages = runBlocking {
-            client.get<Result<List<Message>>>(chatAPI.messages()) {
+            meProfile = client.post<Result<User>>(chatAPI.init(id)).checked().data!!
+            Log.d("CSDN_DEBUG", "init for me profile:${meProfile}")
+            chatDisplayName = client.get<Result<String>>(chatAPI.chatName()).checked().data!!
+            Log.d("CSDN_DEBUG", "init for chat display name:${chatDisplayName}")
+            profiles = client.get<Result<List<User>>>(chatAPI.profiles()).checked().data!!
+            Log.d("CSDN_DEBUG", "init for profiles:${profiles}")
+            count = client.get<Result<Int>>(chatAPI.count()).checked().data!!
+            messages = client.get<Result<List<Message>>>(chatAPI.messages()) {
                 if (lastMessageId != null) {
                     parameter("after_id", lastMessageId)
                 }
             }.checked().data!!
+            Log.d("CSDN_DEBUG", "init for messages:${messages}")
         }
-        Log.d("CSDN_DEBUG", "init for messages:${messages}")
         MainScope().launch(Dispatchers.IO) {
             connectWebSocketToServer(
                 host = chatAPI.host,
