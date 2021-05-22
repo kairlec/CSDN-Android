@@ -119,7 +119,7 @@ class ChatViewModel : ViewModel() {
             }
             val allMessage = messageDao.getAll().map {
                 Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
-                it.toNonLocal(allUser, chatServer)
+                it.toNonLocal(allUser)
             }
             launch {
                 chatServer.connect()

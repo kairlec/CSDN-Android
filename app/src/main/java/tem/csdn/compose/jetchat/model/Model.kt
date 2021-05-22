@@ -16,13 +16,12 @@ data class Message(
     val content: String,
     val timestamp: Int,
     val image: Boolean?,
-    val author: User,
-    val chatServer: ChatServer
+    val author: User
 ) {
     fun toLocal(): LocalMessage = LocalMessage(id, content, timestamp, image, author.displayId)
 
     @Composable
-    fun getImagePainter(): Painter? {
+    fun getImagePainter(chatServer: ChatServer): Painter? {
         return if (image == true) {
             image(
                 url = chatServer.chatAPI.image(
@@ -36,10 +35,9 @@ data class Message(
     }
 
     @Composable
-    fun getImagePainterOrDefault(): Painter {
-        return getImagePainter() ?: painterResource(id = R.drawable.ic_broken_cable)
+    fun getImagePainterOrDefault(chatServer: ChatServer): Painter {
+        return getImagePainter(chatServer) ?: painterResource(id = R.drawable.ic_broken_cable)
     }
-
 }
 
 @Entity(tableName = "users")
@@ -85,8 +83,8 @@ data class LocalMessage(
     val image: Boolean?,
     val authorDisplayId: String
 ) {
-    fun toNonLocal(users: Map<String, User>, chatServer: ChatServer): Message {
-        return Message(id, content, timestamp, image, users[authorDisplayId]!!, chatServer)
+    fun toNonLocal(users: Map<String, User>): Message {
+        return Message(id, content, timestamp, image, users[authorDisplayId]!!)
     }
 }
 

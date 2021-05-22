@@ -392,6 +392,7 @@ fun Message(
         }
         AuthorAndTextMessage(
             msg = msg,
+            chatServer = chatServer,
             isFirstMessageByAuthor = isFirstMessageByAuthor,
             isLastMessageByAuthor = isLastMessageByAuthor,
             authorClicked = onAuthorClick,
@@ -407,6 +408,7 @@ fun Message(
 @Composable
 fun AuthorAndTextMessage(
     msg: Message,
+    chatServer: ChatServer,
     isFirstMessageByAuthor: Boolean,
     isLastMessageByAuthor: Boolean,
     authorClicked: (User) -> Unit,
@@ -420,6 +422,7 @@ fun AuthorAndTextMessage(
         }
         ChatItemBubble(
             msg,
+            chatServer,
             isFirstMessageByAuthor,
             authorClicked = authorClicked,
             getProfile = getProfile
@@ -491,6 +494,7 @@ private fun RowScope.DayHeaderLine() {
 @Composable
 fun ChatItemBubble(
     message: Message,
+    chatServer: ChatServer,
     lastMessageByAuthor: Boolean,
     getProfile: (String) -> User?,
     authorClicked: (User) -> Unit
@@ -513,7 +517,7 @@ fun ChatItemBubble(
             )
         }
 
-        message.getImagePainter()?.let {
+        message.getImagePainter(chatServer)?.let {
             Spacer(modifier = Modifier.height(4.dp))
             Surface(color = backgroundBubbleColor, shape = bubbleShape) {
                 Image(
