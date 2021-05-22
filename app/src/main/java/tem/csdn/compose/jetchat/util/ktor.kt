@@ -1,6 +1,7 @@
 package tem.csdn.compose.jetchat.util
 
 import android.util.Log
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.cookies.*
@@ -12,10 +13,13 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
+import tem.csdn.compose.jetchat.data.*
 
 
 val client = HttpClient(CIO) {
-    install(WebSockets)
+    install(WebSockets) {
+        pingInterval = 30_000
+    }
     install(JsonFeature)
     install(HttpCookies) {
         storage = AcceptAllCookiesStorage()
@@ -27,15 +31,16 @@ suspend fun connectWebSocketToServer(
     port: Int? = DEFAULT_PORT,
     path: String = "/",
     method: HttpMethod = HttpMethod.Get,
-    inputMessageChannel: Channel<String>,
-    outputMessageChannel: Channel<String>,
+    objectMapper: ObjectMapper,
+    inputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>,
+    outputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>,
     onConnected: suspend () -> Unit,
     onDisconnected: suspend () -> Unit,
 ) {
     client.webSocket(method = method, host = host, port = port ?: DEFAULT_PORT, path = path) {
         onConnected()
         val messageOutputRoutine = launch { outputMessages(outputMessageChannel) }
-        val userInputRoutine = launch { inputMessages(inputMessageChannel) }
+        val userInputRoutine = launch { inputMessages(objectMapper, inputMessageChannel) }
 
         userInputRoutine.join()
         messageOutputRoutine.cancelAndJoin()
@@ -44,21 +49,40 @@ suspend fun connectWebSocketToServer(
     client.close()
 }
 
-suspend fun DefaultClientWebSocketSession.outputMessages(outputMessageChannel: Channel<String>) {
+suspend fun DefaultClientWebSocketSession.outputMessages(outputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>) {
     try {
         for (message in incoming) {
-            message as? Frame.Text ?: continue
-            outputMessageChannel.send(message.readText())
+            when (message) {
+                is Frame.Text -> {
+                    outputMessageChannel.send(RawWebSocketFrameWrapper.ofText(message.readText()))
+                }
+                is Frame.Binary -> {
+                    outputMessageChannel.send(RawWebSocketFrameWrapper.ofBinary(message.readBytes()))
+                }
+                else -> continue
+            }
+
         }
     } catch (e: Throwable) {
         Log.e("CSDN_WEBSOCKET_RECEIVE", "Error while receiving: ${e.localizedMessage}", e)
     }
 }
 
-suspend fun DefaultClientWebSocketSession.inputMessages(inputMessageChannel: Channel<String>) {
-    val message = inputMessageChannel.receive()
-    if (!sendRetry(Frame.Text(message))) {
-        Log.e("CSDN_WEBSOCKET_SEND", "send error")
+suspend fun DefaultClientWebSocketSession.inputMessages(
+    objectMapper: ObjectMapper,
+    inputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>
+) {
+    for (rawWebSocketFrameWrapper in inputMessageChannel) {
+        rawWebSocketFrameWrapper.ifRawText {
+            if (!sendRetry(Frame.Text(objectMapper.writeValueAsString(TextWebSocketFrameWrapper.ofMessage(it))))) {
+                Log.e("CSDN_WEBSOCKET_SEND", "send error")
+            }
+        }
+        rawWebSocketFrameWrapper.ifBinary(objectMapper) {
+            if (!sendRetry(Frame.Binary(false, it))) {
+                Log.e("CSDN_WEBSOCKET_SEND", "send error")
+            }
+        }
     }
 }
 

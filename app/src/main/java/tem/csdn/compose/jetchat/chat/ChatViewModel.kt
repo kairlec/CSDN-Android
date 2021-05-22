@@ -5,12 +5,15 @@ import android.util.Log
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.room.Room
+import com.fasterxml.jackson.module.kotlin.convertValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel
@@ -20,7 +23,7 @@ import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.conversation.Message
 import tem.csdn.compose.jetchat.conversation.avatarImage
 import tem.csdn.compose.jetchat.dao.AppDatabase
-import tem.csdn.compose.jetchat.data.ChatServer
+import tem.csdn.compose.jetchat.data.*
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.util.UUIDHelper
@@ -65,7 +68,7 @@ class ChatViewModel : ViewModel() {
                 client,
                 lastMessage?.id,
                 messageDao,
-                userDao,
+                userDao
             ) {
                 Log.d("CSDN_DEBUG_WEBSOCKET_STATUS", "status = $it")
                 withContext(Dispatchers.Main) {
@@ -74,14 +77,14 @@ class ChatViewModel : ViewModel() {
             }
             withContext(Dispatchers.Main) {
                 _chatServer.value = chatServer
-                Log.d("CSDN_UPDATE","update chatServer success")
+                Log.d("CSDN_UPDATE", "update chatServer success")
                 withNewInitProgress(0.1f, R.string.wait_for_server_sync)
             }
             Log.d("CSDN_DEBUG", "chatServer initing")
             val meProfile = chatServer.getMeProfile()
             withContext(Dispatchers.Main) {
                 _meProfile.value = meProfile
-                Log.d("CSDN_UPDATE","update me profile success")
+                Log.d("CSDN_UPDATE", "update me profile success")
                 withNewInitProgress(0.1f)
             }
             val chatName = chatServer.getChatDisplayName()
@@ -91,9 +94,9 @@ class ChatViewModel : ViewModel() {
                     chatServer.chatAPI.image(ChatAPI.ImageType.CHAT, "0"),
                     chatName
                 )
-                Log.d("CSDN_UPDATE","update chatData success")
+                Log.d("CSDN_UPDATE", "update chatData success")
                 _onlineMembers.value = count
-                Log.d("CSDN_UPDATE","update online members success")
+                Log.d("CSDN_UPDATE", "update online members success")
                 withNewInitProgress(0.1f)
             }
             val newMessages = chatServer.getMessages().map { it.toLocal() }
@@ -112,22 +115,67 @@ class ChatViewModel : ViewModel() {
             withContext(Dispatchers.Main) {
                 withNewInitProgress(0.1f, R.string.handle_server_data)
             }
-            val allUser = userDao.getAll().associateBy { it.displayId }
+            val allUser = userDao.getAll().map { it.displayId to it }.toTypedArray()
+            val allUserMap = mutableStateMapOf(*allUser)
             withContext(Dispatchers.Main) {
-                this@ChatViewModel._allProfiles.value = allUser
+                this@ChatViewModel._allProfiles.value = allUserMap
                 withNewInitProgress(0.1f)
             }
             val allMessage = messageDao.getAll().map {
                 Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
-                it.toNonLocal(allUser)
+                it.toNonLocal(allUserMap)
             }
             launch {
                 chatServer.connect()
             }
             withContext(Dispatchers.Main) {
-                this@ChatViewModel._allMessages.value = allMessage
-                Log.d("CSDN_UPDATE","update all messages success")
+                this@ChatViewModel._allMessages.value =
+                    mutableStateListOf(*allMessage.toTypedArray())
+                Log.d("CSDN_UPDATE", "update all messages success")
                 withNewInitProgress(0.1f)
+            }
+            launch {
+                for (rawWebSocketFrameWrapper in chatServer.outputChannel) {
+                    rawWebSocketFrameWrapper.ifText(chatServer.objectMapper) {
+                        when (it.type) {
+                            TextWebSocketFrameWrapper.FrameType.MESSAGE -> {
+                                val msg =
+                                    chatServer.objectMapper.convertValue<Message>(it.content!!)
+                                Log.d("CSDN_DEBUG_RECEIVE", "new msg:${msg}")
+                                messageDao.update(msg.toLocal())
+                                withContext(Dispatchers.Main) {
+                                    _allMessages.value?.add(msg)
+                                }
+                            }
+                            TextWebSocketFrameWrapper.FrameType.NEW_CONNECTION -> {
+                                val user = chatServer.objectMapper.convertValue<User>(it.content!!)
+                                Log.d("CSDN_DEBUG_RECEIVE", "new connection:${user}")
+                                userDao.update(user)
+                                withContext(Dispatchers.Main) {
+                                    _allProfiles.value?.set(user.displayId, user)
+                                    if (user.displayId != meProfile.displayId) {
+                                        _onlineMembers.value = _onlineMembers.value!! + 1
+                                    }
+                                }
+                            }
+                            TextWebSocketFrameWrapper.FrameType.NEW_DISCONNECTION -> {
+                                val user = chatServer.objectMapper.convertValue<User>(it.content!!)
+                                Log.d("CSDN_DEBUG_RECEIVE", "new dis connection:${user}")
+                                userDao.update(user)
+                                withContext(Dispatchers.Main) {
+                                    _allProfiles.value?.set(user.displayId, user)
+                                    _onlineMembers.value = _onlineMembers.value!! - 1
+                                }
+                            }
+                            TextWebSocketFrameWrapper.FrameType.HEARTBEAT -> {
+                                // TODO 保留
+                            }
+                        }
+                    }
+                    rawWebSocketFrameWrapper.ifBinary(chatServer.objectMapper) {
+                        //TODO 保留
+                    }
+                }
             }
         }
     }
@@ -136,8 +184,8 @@ class ChatViewModel : ViewModel() {
     private val _initProgress = MutableLiveData<Float>()
     private val _initProgressTextId = MutableLiveData<Int>()
     private val _onlineMembers = MutableLiveData<Int>()
-    private val _allMessages = MutableLiveData<List<Message>>()
-    private val _allProfiles = MutableLiveData<Map<String, User>>()
+    private val _allMessages = MutableLiveData<MutableList<Message>>()
+    private val _allProfiles = MutableLiveData<MutableMap<String, User>>()
     private val _webSocketStatus = MutableLiveData<Boolean>()
     private val _chatServer = MutableLiveData<ChatServer>()
     private val _meProfile = MutableLiveData<User>()
@@ -145,8 +193,8 @@ class ChatViewModel : ViewModel() {
     val chatData: LiveData<ChatDataScreenState> = _chatData
     val initProgress: LiveData<Float> = _initProgress
     val initProgressTextId: LiveData<Int> = _initProgressTextId
-    val allMessages: LiveData<List<Message>> = _allMessages
-    val allProfiles: LiveData<Map<String, User>> = _allProfiles
+    val allMessages: LiveData<MutableList<Message>> = _allMessages
+    val allProfiles: LiveData<MutableMap<String, User>> = _allProfiles
     val onlineMembers: LiveData<Int> = _onlineMembers
     val webSocketStatus: LiveData<Boolean> = _webSocketStatus
     val chatServer: LiveData<ChatServer> = _chatServer

@@ -65,7 +65,9 @@ import com.google.accompanist.insets.toPaddingValues
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import tem.csdn.compose.jetchat.chat.ChatAPI
+import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.data.ChatServer
+import tem.csdn.compose.jetchat.data.RawWebSocketFrameWrapper
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import java.time.LocalDateTime
@@ -83,7 +85,10 @@ import java.time.OffsetDateTime
  */
 @Composable
 fun ConversationContent(
-    uiState: ConversationUiState,
+//    uiState: ConversationUiState,
+    chatData: ChatDataScreenState,
+    onlineMembers: Int,
+    messages: List<Message>,
     navigateToProfile: (User) -> Unit,
     getProfile: (String) -> User?,
     modifier: Modifier = Modifier,
@@ -98,7 +103,7 @@ fun ConversationContent(
         Box(modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 Messages(
-                    messages = uiState.messages,
+                    messages = messages,
                     navigateToProfile = navigateToProfile,
                     modifier = Modifier.weight(1f),
                     scrollState = scrollState,
@@ -108,7 +113,13 @@ fun ConversationContent(
                 )
                 UserInput(
                     onMessageSent = { content ->
-                        runBlocking { chatServer.inputChannel.send(content) }
+                        runBlocking {
+                            chatServer.inputChannel.send(
+                                RawWebSocketFrameWrapper.ofText(
+                                    content
+                                )
+                            )
+                        }
                     },
                     resetScroll = {
                         scope.launch {
@@ -122,8 +133,8 @@ fun ConversationContent(
             }
             // Channel name bar floats above the messages
             ChannelNameBar(
-                channelName = uiState.chatData.displayName,
-                channelMembers = uiState.onlineMembers,
+                channelName = chatData.displayName,
+                channelMembers = onlineMembers,
                 onNavIconPressed = onNavIconPressed,
                 // Use statusBarsPadding() to move the app bar content below the status bar
                 modifier = Modifier.statusBarsPadding(),

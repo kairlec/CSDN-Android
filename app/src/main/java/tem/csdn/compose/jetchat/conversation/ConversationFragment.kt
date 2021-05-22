@@ -66,7 +66,10 @@ class ConversationFragment : Fragment() {
                 ) {
                     JetchatTheme {
                         ConversationContent(
-                            uiState = ConversationUiState(chatData!!, onlineMembers, messages),
+                            chatData = chatData!!,
+                            onlineMembers = onlineMembers,
+                            messages = messages,
+//                            uiState = ConversationUiState(chatData!!, onlineMembers, messages),
                             navigateToProfile = { user ->
                                 // Click callback
                                 val bundle = bundleOf(

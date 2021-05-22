@@ -11,14 +11,14 @@ import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 
-class ConversationUiState(
-    val chatData: ChatDataScreenState,
-    val onlineMembers: Int,
-    messages: List<Message>
-) {
-    private val _messages: MutableList<Message> = mutableStateListOf(*messages.toTypedArray())
-    val messages: List<Message> = _messages
-}
+//class ConversationUiState(
+//    val chatData: ChatDataScreenState,
+//    val onlineMembers: Int,
+//    messages: List<Message>
+//) {
+//    private val _messages: MutableList<Message> = mutableStateListOf(*messages.toTypedArray())
+//    val messages: List<Message> = _messages
+//}
 
 //class ConversationUiState(
 //    val channelName: String,

@@ -1,6 +1,7 @@
 package tem.csdn.compose.jetchat.data
 
 import android.util.Log
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.channels.Channel
@@ -27,8 +28,9 @@ class ChatServer(
     val userDao: UserDao,
     val onWebSocketEvent: suspend (Boolean) -> Unit
 ) {
-    val inputChannel = Channel<String>(Channel.UNLIMITED)
-    val outputChannel = Channel<String>(Channel.UNLIMITED)
+    val objectMapper = jacksonObjectMapper()
+    val inputChannel = Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED)
+    val outputChannel = Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED)
 
     suspend fun getMeProfile(): User {
         return client.post<Result<User>>(chatAPI.init(id)).checked().data!!.apply {
@@ -69,6 +71,7 @@ class ChatServer(
             host = chatAPI.host,
             port = chatAPI.port,
             path = chatAPI.webSocket(id),
+            objectMapper = objectMapper,
             inputMessageChannel = inputChannel,
             outputMessageChannel = outputChannel,
             onConnected = { onWebSocketEvent(true) },
