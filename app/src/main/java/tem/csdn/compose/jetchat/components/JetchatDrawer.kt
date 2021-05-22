@@ -3,7 +3,6 @@ package tem.csdn.compose.jetchat.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +17,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -29,15 +27,12 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import tem.csdn.compose.jetchat.R
-import tem.csdn.compose.jetchat.data.colleagueProfile
-import tem.csdn.compose.jetchat.data.meProfile
-import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.statusBarsHeight
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
-import tem.csdn.compose.jetchat.data.chatData
+import tem.csdn.compose.jetchat.conversation.image
+import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
 
 @Composable
@@ -45,6 +40,7 @@ fun ColumnScope.JetchatDrawer(
     onProfileClicked: (User) -> Unit,
     onChatClicked: () -> Unit,
     chat: ChatDataScreenState,
+    chatServer: ChatServer,
     profiles: Iterable<User>
 ) {
     // Use statusBarsHeight() to add a spacer which pushes the drawer content
@@ -53,12 +49,12 @@ fun ColumnScope.JetchatDrawer(
     DrawerHeader()
     Divider()
     DrawerItemHeader(stringResource(id = R.string.chat_header))
-    ChatItem(chat.displayName, true) {
+    ChatItem(chat.displayName, true, chat.photo) {
         onChatClicked()
     }
     DrawerItemHeader(stringResource(id = R.string.profile_header))
     profiles.forEach {
-        ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter()) {
+        ProfileItem(text = it.displayName, profilePic = it.getPhotoPainterOrDefault(chatServer)) {
             onProfileClicked(it)
         }
     }
@@ -88,7 +84,12 @@ private fun DrawerItemHeader(text: String) {
 }
 
 @Composable
-private fun ChatItem(text: String, selected: Boolean, onChatClicked: () -> Unit) {
+private fun ChatItem(
+    text: String,
+    selected: Boolean,
+    chatPhoto: String?,
+    onChatClicked: () -> Unit
+) {
     val background = if (selected) {
         Modifier.background(MaterialTheme.colors.primary.copy(alpha = 0.08f))
     } else {
@@ -110,7 +111,8 @@ private fun ChatItem(text: String, selected: Boolean, onChatClicked: () -> Unit)
             MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium)
         }
         Icon(
-            painter = painterResource(id = R.drawable.ic_jetchat),
+            painter = chatPhoto?.let { image(url = it) }
+                ?: painterResource(id = R.drawable.ic_jetchat),
             tint = iconTint,
             modifier = Modifier.padding(8.dp),
             contentDescription = null
@@ -155,27 +157,33 @@ private fun ProfileItem(text: String, profilePic: Painter?, onProfileClicked: ()
         }
     }
 }
-
-@Composable
-@Preview
-fun DrawerPreview() {
-    JetchatTheme {
-        Surface {
-            Column {
-                JetchatDrawer({}, {}, chatData, listOf(meProfile, colleagueProfile))
-            }
-        }
-    }
-}
-
-@Composable
-@Preview
-fun DrawerPreviewDark() {
-    JetchatTheme(isDarkTheme = true) {
-        Surface {
-            Column {
-                JetchatDrawer({}, {}, chatData, listOf(meProfile, colleagueProfile))
-            }
-        }
-    }
-}
+//
+//@Composable
+//@Preview
+//fun DrawerPreview() {
+//    JetchatTheme {
+//        Surface {
+//            Column {
+//                JetchatDrawer(
+//                    {},
+//                    {},
+//                    chatData,
+//                    ChatAPI(""),
+//                    listOf(meProfile, colleagueProfile)
+//                )
+//            }
+//        }
+//    }
+//}
+//
+//@Composable
+//@Preview
+//fun DrawerPreviewDark() {
+//    JetchatTheme(isDarkTheme = true) {
+//        Surface {
+//            Column {
+//                JetchatDrawer({}, {}, chatData, ChatAPI(""), listOf(meProfile, colleagueProfile))
+//            }
+//        }
+//    }
+//}

@@ -74,20 +74,24 @@ android {
 }
 
 dependencies {
-    implementation Libs.KotlinX.serialization
     implementation Libs.Ktor.serialization
     implementation Libs.Ktor.android
     implementation Libs.Ktor.logging
     implementation Libs.Ktor.cio
     implementation Libs.Ktor.websockets
+    implementation Libs.Ktor.jackson
 
+    implementation Libs.Kotlin.reflect
     implementation Libs.Kotlin.stdlib
+    implementation Libs.Kotlin.stdlib_jdk8
+    implementation Libs.Kotlin.common
     implementation Libs.Coroutines.android
 
     implementation Libs.AndroidX.Ads.identifier
     implementation Libs.AndroidX.Activity.activityCompose
     implementation Libs.AndroidX.coreKtx
     implementation Libs.AndroidX.appcompat
+    implementation Libs.AndroidX.startup
     implementation Libs.AndroidX.Lifecycle.livedata
     implementation Libs.AndroidX.Lifecycle.viewModelCompose
     implementation Libs.AndroidX.Navigation.fragment

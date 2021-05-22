@@ -1,38 +1,39 @@
 package tem.csdn.compose.jetchat.data
 
-//import tem.csdn.compose.jetchat.R
-//import tem.csdn.compose.jetchat.chat.ChatDataScreenState
-//import tem.csdn.compose.jetchat.conversation.ConversationUiState
-//import tem.csdn.compose.jetchat.conversation.Message
-//import tem.csdn.compose.jetchat.profile.ProfileScreenState
-//
-//
+import tem.csdn.compose.jetchat.R
+import tem.csdn.compose.jetchat.chat.ChatDataScreenState
+import tem.csdn.compose.jetchat.conversation.ConversationUiState
+import tem.csdn.compose.jetchat.conversation.Message
+import tem.csdn.compose.jetchat.model.User
+
+
 ///**
 // * Example colleague profile
 // */
-//val colleagueProfile = ProfileScreenState(
-//    userId = "12345",
-//    photo = R.drawable.someone_else.toString(),
-//    name = "丁钰",
-//    displayName = "钰儿",
-//    position = "老色皮",
-//    null, null, null
+//val colleagueProfile = User(
+//    "12345",
+//    "丁钰",
+//    "钰儿",
+//    "老色皮",
+//    false,
+//    null,
+//    null,
+//    null
 //)
 //
 ///**
 // * Example "me" profile.
 // */
-//val meProfile = ProfileScreenState(
-//    userId = "54321",
-//    photo = R.drawable.ali.toString(),
-//    name = "Kairlec",
-//    displayName = "SunfoKairlec",
-//    position = "Senior Android Dev at Yearin\nGoogle Developer Expert",
+//val meProfile = User(
+//    "54321",
+//    "Kairlec",
+//    "SunfoKairlec",
+//    "Senior Android Dev at Yearin\nGoogle Developer Expert",
+//    false,
 //    "https://github.com/kairlec", "545886742", null
 //)
 //
 //val chatData = ChatDataScreenState(
-//    chatUrl = "https://chat.kairlec.com",
 //    photo = R.drawable.jetchat_logo.toString(),
 //    displayName = "SCN105NB"
 //)
@@ -85,4 +86,4 @@ package tem.csdn.compose.jetchat.data
 //    initialMessages = initialMessages,
 //    channelName = "#composers",
 //    channelMembers = 42
-//)
+//){}

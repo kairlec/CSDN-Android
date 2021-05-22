@@ -5,6 +5,8 @@ import tem.csdn.compose.jetchat.buildsrc.Versions
 buildscript {
     repositories {
         google()
+        mavenCentral()
+        jcenter()
     }
 
     dependencies {
@@ -24,7 +26,9 @@ subprojects {
 
         if (!Libs.AndroidX.Compose.snapshot.isEmpty()) {
             maven { url Urls.composeSnapshotRepo }
-            maven { url Urls.accompanistSnapshotRepo }
+        }
+        if (Libs.Accompanist.version.endsWith('SNAPSHOT')) {
+            maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
         }
     }
 
@@ -35,14 +39,13 @@ subprojects {
             targetExclude("$buildDir/**/*.kt")
             targetExclude('bin/**/*.kt')
             ktlint(Versions.ktlint).userData([android: "true"])
-            licenseHeaderFile rootProject.file('spotless/copyright.kt')
         }
     }
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             // Treat all Kotlin warnings as errors
-            allWarningsAsErrors = true
+            //allWarningsAsErrors = true
 
             freeCompilerArgs += '-Xopt-in=kotlin.RequiresOptIn'
 

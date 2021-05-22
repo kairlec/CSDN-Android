@@ -5,7 +5,7 @@ import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.model.UserAndMessage
 
-@Database(entities = [User::class, LocalMessage::class], version = 1)
+@Database(entities = [User::class, LocalMessage::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun messageDao(): MessageDao
@@ -15,6 +15,9 @@ abstract class AppDatabase : RoomDatabase() {
 interface UserDao {
     @Query("SELECT * FROM users")
     fun getAll(): List<User>
+
+    @Query("SELECT * FROM users WHERE displayId = :displayId")
+    fun getByDisplayId(displayId:String): User?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun update(vararg users: User)

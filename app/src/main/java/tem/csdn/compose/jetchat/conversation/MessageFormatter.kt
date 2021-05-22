@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
-import tem.csdn.compose.jetchat.data.OnlineData
+import tem.csdn.compose.jetchat.model.User
 
 // Regex containing the syntax tokens
 val symbolPattern by lazy {
@@ -42,7 +42,8 @@ typealias SymbolAnnotation = Pair<AnnotatedString, StringAnnotation?>
  */
 @Composable
 fun messageFormatter(
-    text: String
+    text: String,
+    getProfile: (String) -> User?
 ): AnnotatedString {
     val tokens = symbolPattern.findAll(text)
 
@@ -63,7 +64,8 @@ fun messageFormatter(
             val (annotatedString, stringAnnotation) = getSymbolAnnotation(
                 matchResult = token,
                 colors = MaterialTheme.colors,
-                codeSnippetBackground = codeSnippetBackground
+                codeSnippetBackground = codeSnippetBackground,
+                getProfile = getProfile
             )
             append(annotatedString)
 
@@ -92,12 +94,13 @@ fun messageFormatter(
 private fun getSymbolAnnotation(
     matchResult: MatchResult,
     colors: Colors,
-    codeSnippetBackground: Color
+    codeSnippetBackground: Color,
+    getProfile: (String) -> User?
 ): SymbolAnnotation {
     return when (matchResult.value.first()) {
         '@' -> {
             val userId = matchResult.value.substring(1)
-            val profile = OnlineData.getProfileOrNull(userId)
+            val profile = getProfile(userId)
             if (profile == null) {
                 SymbolAnnotation(AnnotatedString(matchResult.value), null)
             } else {

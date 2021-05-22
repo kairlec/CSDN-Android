@@ -11,16 +11,16 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
 import tem.csdn.compose.jetchat.MainViewModel
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ViewWindowInsetObserver
+import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.model.User
 
 class ProfileFragment : Fragment() {
-
-    private val viewModel: ProfileViewModel by viewModels()
+    private val chatViewModel:ChatViewModel by activityViewModels()
+    private val viewModel: ProfileViewModel by activityViewModels()
     private val activityViewModel: MainViewModel by activityViewModels()
 
     override fun onAttach(context: Context) {
@@ -47,7 +47,8 @@ class ProfileFragment : Fragment() {
 
         setContent {
             val userData by viewModel.userData.observeAsState()
-
+            val chatServer by chatViewModel.chatServer.observeAsState()
+            val meProfile by chatViewModel.meProfile.observeAsState()
             CompositionLocalProvider(LocalWindowInsets provides windowInsets) {
                 JetchatTheme {
                     if (userData == null) {
@@ -57,7 +58,9 @@ class ProfileFragment : Fragment() {
                             userData = userData!!,
                             onNavIconPressed = {
                                 activityViewModel.openDrawer()
-                            }
+                            },
+                            chatServer = chatServer!!,
+                            meProfile = meProfile!!
                         )
                     }
                 }

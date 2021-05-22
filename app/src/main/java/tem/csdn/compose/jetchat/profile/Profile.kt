@@ -46,16 +46,20 @@ import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.components.AnimatingFabContent
 import tem.csdn.compose.jetchat.components.JetchatAppBar
 import tem.csdn.compose.jetchat.components.baselineHeight
-import tem.csdn.compose.jetchat.data.colleagueProfile
-import tem.csdn.compose.jetchat.data.meProfile
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.insets.statusBarsPadding
+import tem.csdn.compose.jetchat.data.ChatServer
+import tem.csdn.compose.jetchat.model.User
 
 @Composable
-fun ProfileScreen(userData: ProfileScreenState, onNavIconPressed: () -> Unit = { }) {
-
+fun ProfileScreen(
+    userData: User,
+    meProfile: User,
+    chatServer: ChatServer,
+    onNavIconPressed: () -> Unit = { }
+) {
     var functionalityNotAvailablePopupShown by remember { mutableStateOf(false) }
     if (functionalityNotAvailablePopupShown) {
         FunctionalityNotAvailablePopup { functionalityNotAvailablePopupShown = false }
@@ -95,14 +99,15 @@ fun ProfileScreen(userData: ProfileScreenState, onNavIconPressed: () -> Unit = {
                     ProfileHeader(
                         scrollState,
                         userData,
-                        this@BoxWithConstraints.maxHeight
+                        this@BoxWithConstraints.maxHeight,
+                        chatServer
                     )
                     UserInfoFields(userData, this@BoxWithConstraints.maxHeight)
                 }
             }
             ProfileFab(
                 extended = scrollState.value == 0,
-                userIsMe = userData.isMe(),
+                userIsMe = userData.displayId == meProfile.displayId,
                 modifier = Modifier.align(Alignment.BottomEnd),
                 onFabClicked = { functionalityNotAvailablePopupShown = true }
             )
@@ -111,7 +116,7 @@ fun ProfileScreen(userData: ProfileScreenState, onNavIconPressed: () -> Unit = {
 }
 
 @Composable
-private fun UserInfoFields(userData: ProfileScreenState, containerHeight: Dp) {
+private fun UserInfoFields(userData: User, containerHeight: Dp) {
     Column {
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -137,7 +142,7 @@ private fun UserInfoFields(userData: ProfileScreenState, containerHeight: Dp) {
 
 @Composable
 private fun NameAndPosition(
-    userData: ProfileScreenState
+    userData: User
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Name(
@@ -154,7 +159,7 @@ private fun NameAndPosition(
 }
 
 @Composable
-private fun Name(userData: ProfileScreenState, modifier: Modifier = Modifier) {
+private fun Name(userData: User, modifier: Modifier = Modifier) {
     Text(
         text = userData.name,
         modifier = modifier,
@@ -163,7 +168,7 @@ private fun Name(userData: ProfileScreenState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Position(userData: ProfileScreenState, modifier: Modifier = Modifier) {
+private fun Position(userData: User, modifier: Modifier = Modifier) {
     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
         Text(
             text = userData.position,
@@ -176,23 +181,22 @@ private fun Position(userData: ProfileScreenState, modifier: Modifier = Modifier
 @Composable
 private fun ProfileHeader(
     scrollState: ScrollState,
-    data: ProfileScreenState,
-    containerHeight: Dp
+    data: User,
+    containerHeight: Dp,
+    chatServer: ChatServer,
 ) {
     val offset = (scrollState.value / 2)
     val offsetDp = with(LocalDensity.current) { offset.toDp() }
 
-    data.getPhotoPainter()?.let {
-        Image(
-            modifier = Modifier
-                .heightIn(max = containerHeight / 2)
-                .fillMaxWidth()
-                .padding(top = offsetDp),
-            painter = it,
-            contentScale = ContentScale.Crop,
-            contentDescription = null
-        )
-    }
+    Image(
+        modifier = Modifier
+            .heightIn(max = containerHeight / 2)
+            .fillMaxWidth()
+            .padding(top = offsetDp),
+        painter = data.getPhotoPainterOrDefault(chatServer),
+        contentScale = ContentScale.Crop,
+        contentDescription = null
+    )
 }
 
 @Composable
@@ -267,35 +271,35 @@ fun ProfileFab(
     }
 }
 
-@Preview(widthDp = 640, heightDp = 360)
-@Composable
-fun ConvPreviewLandscapeMeDefault() {
-    ProvideWindowInsets(consumeWindowInsets = false) {
-        JetchatTheme {
-            ProfileScreen(meProfile)
-        }
-    }
-}
-
-@Preview(widthDp = 360, heightDp = 480)
-@Composable
-fun ConvPreviewPortraitMeDefault() {
-    ProvideWindowInsets(consumeWindowInsets = false) {
-        JetchatTheme {
-            ProfileScreen(meProfile)
-        }
-    }
-}
-
-@Preview(widthDp = 360, heightDp = 480)
-@Composable
-fun ConvPreviewPortraitOtherDefault() {
-    ProvideWindowInsets(consumeWindowInsets = false) {
-        JetchatTheme {
-            ProfileScreen(colleagueProfile)
-        }
-    }
-}
+//@Preview(widthDp = 640, heightDp = 360)
+//@Composable
+//fun ConvPreviewLandscapeMeDefault() {
+//    ProvideWindowInsets(consumeWindowInsets = false) {
+//        JetchatTheme {
+//            ProfileScreen(meProfile, ChatAPI(""))
+//        }
+//    }
+//}
+//
+//@Preview(widthDp = 360, heightDp = 480)
+//@Composable
+//fun ConvPreviewPortraitMeDefault() {
+//    ProvideWindowInsets(consumeWindowInsets = false) {
+//        JetchatTheme {
+//            ProfileScreen(meProfile, ChatAPI(""))
+//        }
+//    }
+//}
+//
+//@Preview(widthDp = 360, heightDp = 480)
+//@Composable
+//fun ConvPreviewPortraitOtherDefault() {
+//    ProvideWindowInsets(consumeWindowInsets = false) {
+//        JetchatTheme {
+//            ProfileScreen(colleagueProfile,ChatAPI(""))
+//        }
+//    }
+//}
 
 @Preview
 @Composable

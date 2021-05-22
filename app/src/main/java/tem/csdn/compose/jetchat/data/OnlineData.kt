@@ -1,34 +1,16 @@
 package tem.csdn.compose.jetchat.data
 
+import android.util.Log
 import io.ktor.client.*
-import io.ktor.client.features.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.channels.Channel
 import tem.csdn.compose.jetchat.chat.ChatAPI
+import tem.csdn.compose.jetchat.dao.MessageDao
+import tem.csdn.compose.jetchat.dao.UserDao
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.connectWebSocketToServer
 import java.lang.Exception
-import java.util.*
-
-object OnlineData {
-    fun getProfile(userId: String): User {
-        return if (userId == meProfile.userId) {
-            meProfile
-        } else {
-            colleagueProfile
-        }
-    }
-
-    fun getProfileOrNull(userId: String): User? {
-        return if (userId == meProfile.userId) {
-            meProfile
-        } else {
-            colleagueProfile
-        }
-    }
-
-}
 
 class ChatServerInitException(
     val code: Int = -1,
@@ -36,47 +18,65 @@ class ChatServerInitException(
     override val cause: Throwable? = null
 ) : Exception(message, cause)
 
-class ChatServer(chatBaseUrl: String, id: String, client: HttpClient, lastMessageId: Long?) {
-    data class WebSocketFrameWrapper(
-        val type: FrameType,
-        val content: Any
-    ) {
-        enum class FrameType {
-            MESSAGE,
-            NEW_CONNECTION,
-            NEW_DISCONNECTION
+class ChatServer(
+    val chatAPI: ChatAPI,
+    val id: String,
+    private val client: HttpClient,
+    private val lastMessageId: Long?,
+    val messageDao: MessageDao,
+    val userDao: UserDao,
+    val onWebSocketEvent: suspend (Boolean) -> Unit
+) {
+    val inputChannel = Channel<String>(Channel.UNLIMITED)
+    val outputChannel = Channel<String>(Channel.UNLIMITED)
+
+    suspend fun getMeProfile(): User {
+        return client.post<Result<User>>(chatAPI.init(id)).checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for me profile:${this}")
         }
     }
 
-    private val chatAPI = ChatAPI(chatBaseUrl)
-    val chatDisplayName: String
-    val meProfile: User
-    val profiles: List<User>
-    val count: Int
-    val messages: List<Message>
+    suspend fun getChatDisplayName(): String {
+        return client.get<Result<String>>(chatAPI.chatName()).checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for chat display name:${this}")
+        }
+    }
 
-    init {
-        meProfile = runBlocking {
-            client.post<Result<User>>(chatAPI.init(id)).checked().data!!
+    suspend fun getProfiles(): List<User> {
+        return client.get<Result<List<User>>>(chatAPI.profiles()).checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for profiles:${this}")
         }
-        chatDisplayName = runBlocking {
-            client.get<Result<String>>(chatAPI.chatName()).checked().data!!
+    }
+
+    suspend fun getOnlineNumber(): Int {
+        return client.get<Result<Int>>(chatAPI.count()).checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for count:${this}")
         }
-        profiles = runBlocking {
-            client.get<Result<List<User>>>(chatAPI.profiles()).checked().data!!
-        }
-        count = runBlocking {
-            client.get<Result<Int>>(chatAPI.count()).checked().data!!
-        }
-        messages =
-            runBlocking {
-                client.get<Result<List<Message>>>(chatAPI.messages()) {
-                    if (lastMessageId != null) {
-                        this.parameter("after_id", lastMessageId)
-                    }
-                }.checked().data!!
+    }
+
+    suspend fun getMessages(): List<Message> {
+        return client.get<Result<List<Message>>>(chatAPI.messages()) {
+            if (lastMessageId != null) {
+                parameter("after_id", lastMessageId)
             }
+        }.checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for messages:${this}")
+        }
     }
+
+    suspend fun connect() {
+        connectWebSocketToServer(
+            host = chatAPI.host,
+            port = chatAPI.port,
+            path = chatAPI.webSocket(id),
+            inputMessageChannel = inputChannel,
+            outputMessageChannel = outputChannel,
+            onConnected = { onWebSocketEvent(true) },
+            onDisconnected = { onWebSocketEvent(false) }
+        )
+        Log.d("CSDN_DEBUG", "init for websocket")
+    }
+
 }
 
 class Result<T>(

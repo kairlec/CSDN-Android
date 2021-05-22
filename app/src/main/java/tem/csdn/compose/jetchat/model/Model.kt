@@ -7,6 +7,8 @@ import androidx.room.*
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.conversation.avatarImage
+import tem.csdn.compose.jetchat.conversation.image
+import tem.csdn.compose.jetchat.data.ChatServer
 import java.io.Serializable
 
 data class Message(
@@ -14,9 +16,28 @@ data class Message(
     val content: String,
     val timestamp: Int,
     val image: Boolean?,
-    val author: User,
+    val author: User
 ) {
     fun toLocal(): LocalMessage = LocalMessage(id, content, timestamp, image, author.displayId)
+
+    @Composable
+    fun getImagePainter(chatServer: ChatServer): Painter? {
+        return if (image == true) {
+            image(
+                url = chatServer.chatAPI.image(
+                    ChatAPI.ImageType.IMAGE,
+                    id.toString()
+                )
+            )
+        } else {
+            null
+        }
+    }
+
+    @Composable
+    fun getImagePainterOrDefault(chatServer: ChatServer): Painter {
+        return getImagePainter(chatServer) ?: painterResource(id = R.drawable.ic_broken_cable)
+    }
 }
 
 @Entity(tableName = "users")
@@ -32,23 +53,20 @@ data class User(
 ) : Serializable, Comparable<User> {
     companion object {
         private const val serialVersionUID = 47073173576278320L
-        lateinit var meProfile: User
     }
 
-    fun isMe() = displayId == meProfile.displayId
-
     @Composable
-    fun getPhotoPainter(chatAPI: ChatAPI): Painter? {
+    fun getPhotoPainter(chatServer: ChatServer): Painter? {
         return if (photo == true) {
-            avatarImage(url = chatAPI.image(ChatAPI.ImageType.PHOTO, displayId))
+            avatarImage(url = chatServer.chatAPI.image(ChatAPI.ImageType.PHOTO, displayId))
         } else {
             null
         }
     }
 
     @Composable
-    fun getPhotoPainterOrDefault(chatAPI: ChatAPI): Painter {
-        return getPhotoPainter(chatAPI) ?: painterResource(id = R.drawable.ic_default_avatar_man)
+    fun getPhotoPainterOrDefault(chatServer: ChatServer): Painter {
+        return getPhotoPainter(chatServer) ?: painterResource(id = R.drawable.ic_default_avatar_man)
     }
 
     override fun compareTo(other: User): Int {
