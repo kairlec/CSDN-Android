@@ -14,20 +14,20 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.room.Room
 import com.fasterxml.jackson.module.kotlin.convertValue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
+import io.ktor.http.cio.websocket.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.conversation.Message
 import tem.csdn.compose.jetchat.conversation.avatarImage
 import tem.csdn.compose.jetchat.dao.AppDatabase
 import tem.csdn.compose.jetchat.data.*
+import tem.csdn.compose.jetchat.model.HeartBeatException
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.util.UUIDHelper
 import tem.csdn.compose.jetchat.util.client
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 class ChatViewModel : ViewModel() {
@@ -42,6 +42,52 @@ class ChatViewModel : ViewModel() {
     }
 
     private var inited = false
+    private var reloading = false
+
+    private suspend fun reload() {
+        reloading = true
+        coroutineScope {
+            val count = chatServer.value!!.getOnlineNumber()
+            withContext(Dispatchers.Main) {
+                _onlineMembers.value = count
+                Log.d("CSDN_UPDATE", "reload online members success")
+            }
+            val newMessages = chatServer.value!!.getMessages().map { it.toLocal() }
+            withContext(Dispatchers.Main) {
+                withNewInitProgress(0.1f)
+            }
+            chatServer.value!!.messageDao.update(*newMessages.toTypedArray())
+            withContext(Dispatchers.Main) {
+                withNewInitProgress(0.1f)
+            }
+            val newProfiles = chatServer.value!!.getProfiles()
+            withContext(Dispatchers.Main) {
+                withNewInitProgress(0.1f)
+            }
+            chatServer.value!!.userDao.update(*newProfiles.toTypedArray())
+            withContext(Dispatchers.Main) {
+                withNewInitProgress(0.1f, R.string.handle_server_data)
+            }
+            val allUser =
+                chatServer.value!!.userDao.getAll().map { it.displayId to it }.toTypedArray()
+            val allUserMap = mutableStateMapOf(*allUser)
+            withContext(Dispatchers.Main) {
+                this@ChatViewModel._allProfiles.value = allUserMap
+                withNewInitProgress(0.1f)
+            }
+            val allMessage = chatServer.value!!.messageDao.getAll().map {
+                Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
+                it.toNonLocal(allUserMap)
+            }
+            withContext(Dispatchers.Main) {
+                this@ChatViewModel._allMessages.value =
+                    mutableStateListOf(*allMessage.toTypedArray())
+                Log.d("CSDN_UPDATE", "reload all messages success")
+                withNewInitProgress(0.1f)
+            }
+        }
+        reloading = false
+    }
 
     fun initIfNeed(context: Context) {
         if (inited) {
@@ -125,8 +171,44 @@ class ChatViewModel : ViewModel() {
                 Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
                 it.toNonLocal(allUserMap)
             }
+            var lastHeartBeatUUIDString: String? = null
+            var heartBeatJob: Job? = null
             launch {
-                chatServer.connect()
+                while (true) {
+                    chatServer.connect({
+                        heartBeatJob = launch {
+                            while (true) {
+                                if (lastHeartBeatUUIDString != null) {
+                                    val exp = HeartBeatException.HeartBeatTimeoutException()
+                                    close(
+                                        CloseReason(
+                                            CloseReason.Codes.CANNOT_ACCEPT,
+                                            exp.toString()
+                                        )
+                                    )
+                                    break
+                                }
+                                lastHeartBeatUUIDString = UUID.randomUUID().toString()
+                                chatServer.inputChannel.send(
+                                    RawWebSocketFrameWrapper.ofText(
+                                        chatServer.objectMapper.writeValueAsString(
+                                            TextWebSocketFrameWrapper(
+                                                TextWebSocketFrameWrapper.FrameType.HEARTBEAT,
+                                                lastHeartBeatUUIDString
+                                            )
+                                        )
+                                    )
+                                )
+                                //30s心跳一次
+                                delay(30_000)
+                            }
+                        }
+                    }) {
+                        heartBeatJob?.cancel()
+                        //断开就重新加载并重连
+                        reload()
+                    }
+                }
             }
             withContext(Dispatchers.Main) {
                 this@ChatViewModel._allMessages.value =
@@ -136,44 +218,81 @@ class ChatViewModel : ViewModel() {
             }
             launch {
                 for (rawWebSocketFrameWrapper in chatServer.outputChannel) {
-                    rawWebSocketFrameWrapper.ifText(chatServer.objectMapper) {
-                        when (it.type) {
-                            TextWebSocketFrameWrapper.FrameType.MESSAGE -> {
-                                val msg =
-                                    chatServer.objectMapper.convertValue<Message>(it.content!!)
-                                Log.d("CSDN_DEBUG_RECEIVE", "new msg:${msg}")
-                                messageDao.update(msg.toLocal())
-                                withContext(Dispatchers.Main) {
-                                    _allMessages.value?.add(msg)
+                    try {
+                        rawWebSocketFrameWrapper.ifText(chatServer.objectMapper) {
+                            when (it.type) {
+                                TextWebSocketFrameWrapper.FrameType.MESSAGE -> {
+                                    val msg =
+                                        chatServer.objectMapper.convertValue<Message>(it.content!!)
+                                    Log.d("CSDN_DEBUG_RECEIVE", "new msg:${msg}")
+                                    messageDao.update(msg.toLocal())
+                                    withContext(Dispatchers.Main) {
+                                        _allMessages.value?.add(msg)
+                                    }
                                 }
-                            }
-                            TextWebSocketFrameWrapper.FrameType.NEW_CONNECTION -> {
-                                val user = chatServer.objectMapper.convertValue<User>(it.content!!)
-                                Log.d("CSDN_DEBUG_RECEIVE", "new connection:${user}")
-                                userDao.update(user)
-                                withContext(Dispatchers.Main) {
-                                    _allProfiles.value?.set(user.displayId, user)
-                                    if (user.displayId != meProfile.displayId) {
-                                        _onlineMembers.value = _onlineMembers.value!! + 1
+                                TextWebSocketFrameWrapper.FrameType.NEW_CONNECTION -> {
+                                    val user =
+                                        chatServer.objectMapper.convertValue<User>(it.content!!)
+                                    Log.d("CSDN_DEBUG_RECEIVE", "new connection:${user}")
+                                    userDao.update(user)
+                                    withContext(Dispatchers.Main) {
+                                        _allProfiles.value?.set(user.displayId, user)
+                                        if (user.displayId != meProfile.displayId) {
+                                            _onlineMembers.value = _onlineMembers.value!! + 1
+                                        }
+                                    }
+                                }
+                                TextWebSocketFrameWrapper.FrameType.NEW_DISCONNECTION -> {
+                                    val user =
+                                        chatServer.objectMapper.convertValue<User>(it.content!!)
+                                    Log.d("CSDN_DEBUG_RECEIVE", "new dis connection:${user}")
+                                    userDao.update(user)
+                                    withContext(Dispatchers.Main) {
+                                        _allProfiles.value?.set(user.displayId, user)
+                                        _onlineMembers.value = _onlineMembers.value!! - 1
+                                    }
+                                }
+                                TextWebSocketFrameWrapper.FrameType.HEARTBEAT -> {
+                                    val content =
+                                        chatServer.objectMapper.convertValue<String>(it.content!!)
+                                    Log.d("CSDN_DEBUG", "HEARTBEAT")
+                                    chatServer.inputChannel.send(
+                                        RawWebSocketFrameWrapper.ofText(
+                                            chatServer.objectMapper.writeValueAsString(
+                                                TextWebSocketFrameWrapper(
+                                                    TextWebSocketFrameWrapper.FrameType.HEARTBEAT_ACK,
+                                                    content
+                                                )
+                                            )
+                                        )
+                                    )
+                                }
+                                TextWebSocketFrameWrapper.FrameType.HEARTBEAT_ACK -> {
+                                    val contentString =
+                                        chatServer.objectMapper.convertValue<String>(it.content!!)
+                                    //心跳回包内容异常
+                                    if (contentString != lastHeartBeatUUIDString) {
+                                        val exp =
+                                            HeartBeatException.HeartBeatContentMismatchException(
+                                                lastHeartBeatUUIDString ?: "null",
+                                                contentString
+                                            )
+                                        Log.w("CSDN_HEARTBEAT", exp)
+                                    }
+                                    lastHeartBeatUUIDString = null
+                                }
+                                TextWebSocketFrameWrapper.FrameType.NEED_SYNC -> {
+                                    if (!reloading) {
+                                        reload()
                                     }
                                 }
                             }
-                            TextWebSocketFrameWrapper.FrameType.NEW_DISCONNECTION -> {
-                                val user = chatServer.objectMapper.convertValue<User>(it.content!!)
-                                Log.d("CSDN_DEBUG_RECEIVE", "new dis connection:${user}")
-                                userDao.update(user)
-                                withContext(Dispatchers.Main) {
-                                    _allProfiles.value?.set(user.displayId, user)
-                                    _onlineMembers.value = _onlineMembers.value!! - 1
-                                }
-                            }
-                            TextWebSocketFrameWrapper.FrameType.HEARTBEAT -> {
-                                // TODO 保留
-                            }
                         }
-                    }
-                    rawWebSocketFrameWrapper.ifBinary(chatServer.objectMapper) {
-                        //TODO 保留
+                        rawWebSocketFrameWrapper.ifBinary(chatServer.objectMapper) {
+                            //TODO 保留
+                        }
+                    } catch (e: Throwable) {
+                        Log.w("CSDN_RECEIVE", "wrong text format:${e.message}")
                     }
                 }
             }

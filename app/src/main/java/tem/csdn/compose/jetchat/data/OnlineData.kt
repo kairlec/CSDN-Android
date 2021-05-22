@@ -3,6 +3,7 @@ package tem.csdn.compose.jetchat.data
 import android.util.Log
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.*
+import io.ktor.client.features.websocket.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.channels.Channel
 import tem.csdn.compose.jetchat.chat.ChatAPI
@@ -66,16 +67,23 @@ class ChatServer(
         }
     }
 
-    suspend fun connect() {
+    suspend fun connect(onConnect: suspend DefaultClientWebSocketSession.() -> Unit, onDisconnect: suspend () -> Unit) {
         connectWebSocketToServer(
+            ssl = chatAPI.ssl,
             host = chatAPI.host,
             port = chatAPI.port,
             path = chatAPI.webSocket(id),
             objectMapper = objectMapper,
             inputMessageChannel = inputChannel,
             outputMessageChannel = outputChannel,
-            onConnected = { onWebSocketEvent(true) },
-            onDisconnected = { onWebSocketEvent(false) }
+            onConnected = {
+                onWebSocketEvent(true)
+                onConnect(it)
+            },
+            onDisconnected = {
+                onWebSocketEvent(false)
+                onDisconnect()
+            }
         )
         Log.d("CSDN_DEBUG", "init for websocket")
     }

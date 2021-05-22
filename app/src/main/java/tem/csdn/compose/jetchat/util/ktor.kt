@@ -27,6 +27,7 @@ val client = HttpClient(CIO) {
 }
 
 suspend fun connectWebSocketToServer(
+    ssl: Boolean,
     host: String = "localhost",
     port: Int? = DEFAULT_PORT,
     path: String = "/",
@@ -34,19 +35,30 @@ suspend fun connectWebSocketToServer(
     objectMapper: ObjectMapper,
     inputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>,
     outputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>,
-    onConnected: suspend () -> Unit,
+    onConnected: suspend (DefaultClientWebSocketSession) -> Unit,
     onDisconnected: suspend () -> Unit,
 ) {
-    client.webSocket(method = method, host = host, port = port ?: DEFAULT_PORT, path = path) {
-        onConnected()
-        val messageOutputRoutine = launch { outputMessages(outputMessageChannel) }
-        val userInputRoutine = launch { inputMessages(objectMapper, inputMessageChannel) }
+    try {
+        client.webSocket(
+            method = method,
+            host = host,
+            port = port ?: DEFAULT_PORT,
+            path = path,
+            request = {
+                if (ssl) {
+                    url.protocol = URLProtocol.WSS
+                }
+            }) {
+            onConnected(this)
+            val messageOutputRoutine = launch { outputMessages(outputMessageChannel) }
+            val userInputRoutine = launch { inputMessages(objectMapper, inputMessageChannel) }
 
-        userInputRoutine.join()
-        messageOutputRoutine.cancelAndJoin()
+            userInputRoutine.join()
+            messageOutputRoutine.cancelAndJoin()
+        }
+    } finally {
+        onDisconnected()
     }
-    onDisconnected()
-    client.close()
 }
 
 suspend fun DefaultClientWebSocketSession.outputMessages(outputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>) {
@@ -74,7 +86,16 @@ suspend fun DefaultClientWebSocketSession.inputMessages(
 ) {
     for (rawWebSocketFrameWrapper in inputMessageChannel) {
         rawWebSocketFrameWrapper.ifRawText {
-            if (!sendRetry(Frame.Text(objectMapper.writeValueAsString(TextWebSocketFrameWrapper.ofMessage(it))))) {
+            if (!sendRetry(
+                    Frame.Text(
+                        objectMapper.writeValueAsString(
+                            TextWebSocketFrameWrapper.ofMessage(
+                                it
+                            )
+                        )
+                    )
+                )
+            ) {
                 Log.e("CSDN_WEBSOCKET_SEND", "send error")
             }
         }
