@@ -24,7 +24,7 @@ val client = HttpClient(CIO) {
 
 suspend fun connectWebSocketToServer(
     host: String = "localhost",
-    port: Int = DEFAULT_PORT,
+    port: Int? = DEFAULT_PORT,
     path: String = "/",
     method: HttpMethod = HttpMethod.Get,
     inputMessageChannel: Channel<String>,
@@ -32,7 +32,7 @@ suspend fun connectWebSocketToServer(
     onConnected: suspend () -> Unit,
     onDisconnected: suspend () -> Unit,
 ) {
-    client.webSocket(method = method, host = host, port = port, path = path) {
+    client.webSocket(method = method, host = host, port = port ?: DEFAULT_PORT, path = path) {
         onConnected()
         val messageOutputRoutine = launch { outputMessages(outputMessageChannel) }
         val userInputRoutine = launch { inputMessages(inputMessageChannel) }

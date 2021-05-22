@@ -2,6 +2,7 @@ package tem.csdn.compose.jetchat
 
 import android.os.Bundle
 import android.util.Log
+import android.view.View.inflate
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -9,6 +10,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,11 +27,8 @@ import tem.csdn.compose.jetchat.conversation.LocalBackPressedDispatcher
 import tem.csdn.compose.jetchat.databinding.ContentMainBinding
 import com.google.accompanist.insets.ProvideWindowInsets
 import kotlinx.coroutines.*
-import tem.csdn.compose.jetchat.chat.ChatAPI
-import tem.csdn.compose.jetchat.chat.ChatDataScreenState
+import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.data.ChatServer
-import tem.csdn.compose.jetchat.data.colleagueProfile
-import tem.csdn.compose.jetchat.data.meProfile
 
 
 /**
@@ -37,6 +36,7 @@ import tem.csdn.compose.jetchat.data.meProfile
  */
 class NavActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,33 +47,14 @@ class NavActivity : AppCompatActivity() {
 
         setContent {
             val context = LocalContext.current
-            val chatServer = ChatServer.currentChatServer
-            var progress by remember { mutableStateOf(0.0f) }
-            val initAppText = stringResource(id = R.string.init_app)
-            var progressText by remember { mutableStateOf(initAppText) }
-            var chatDisplayName by mutableStateOf("")
-            var onlineNumbers by mutableStateOf(0)
-            val composableScope = rememberCoroutineScope()
-
-            composableScope.launch(Dispatchers.IO) {
-                while (true) {
-                    val receive = chatServer.receiveProgress()
-                    withContext(Dispatchers.Main){
-                        progress += receive.first
-                        if (receive.second != null) {
-                            progressText = context.resources.getString(receive.second!!)
-                        }
-                    }
-                    if (progress >= 1f) {
-                        chatServer.closeProgress()
-                        break
-                    }
-                }
-            }
-
+            chatViewModel.initIfNeed(context)
+            val chatData by chatViewModel.chatData.observeAsState()
+            val progress by chatViewModel.initProgress.observeAsState(initial = 0f)
+            val progressTextId by
+            chatViewModel.initProgressTextId.observeAsState(initial = R.string.init_app)
+            val profiles by chatViewModel.allProfiles.observeAsState(initial = emptyMap())
             Log.d("CSDN_DEBUG", "(main)progress=${progress}")
-            if (progress < 1f) {
-                Log.d("CSDN_DEBUG", "(main)ready init:${progress}")
+            if (progress < 1f || chatData == null) {
                 val animatedProgress by animateFloatAsState(
                     targetValue = progress,
                     animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
@@ -87,14 +68,9 @@ class NavActivity : AppCompatActivity() {
                 ) {
                     CircularProgressIndicator(progress = animatedProgress)
                     Spacer(Modifier.requiredHeight(30.dp))
-                    Text(progressText)
+                    Text(stringResource(id = progressTextId))
                 }
             } else {
-                val chatData = ChatDataScreenState(
-                    chatServer.chatAPI.image(ChatAPI.ImageType.CHAT, "0"),
-                    chatServer.chatDisplayName
-                )
-                val profiles = runBlocking { chatServer.chatData.allUser.receive() }
                 // Provide WindowInsets to our content. We don't want to consume them, so that
                 // they keep being pass down the view hierarchy (since we're using fragments).
                 ProvideWindowInsets(consumeWindowInsets = false) {
@@ -122,6 +98,8 @@ class NavActivity : AppCompatActivity() {
                             }
                         }
 
+                        val chatServer by chatViewModel.chatServer.observeAsState()
+                        Log.d("CSDN_CON","main:chatServer=${chatServer}")
                         JetchatScaffold(
                             scaffoldState,
                             onChatClicked = {
@@ -132,15 +110,15 @@ class NavActivity : AppCompatActivity() {
                             },
                             onProfileClicked = {
                                 val bundle =
-                                    bundleOf("profile" to it, "chatAPI" to chatServer.chatAPI)
+                                    bundleOf("profile" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
                                 scope.launch {
                                     scaffoldState.drawerState.close()
                                 }
                             },
-                            chat = chatData,
+                            chat = chatData!!,
                             profiles = profiles.values,
-                            chatAPI = chatServer.chatAPI
+                            chatServer = chatServer!!
                         ) {
                             AndroidViewBinding(ContentMainBinding::inflate)
                         }

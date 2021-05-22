@@ -1,9 +1,16 @@
 package tem.csdn.compose.jetchat.chat
 
+import android.util.Log
 import java.io.Serializable
 
-class ChatAPI(ssl: Boolean,val host: String,val port: Int) : Serializable {
-    private val baseUrl = "${if (ssl) "https" else "http"}://${host}:${port}"
+class ChatAPI(ssl: Boolean, val host: String, val port: Int? = null) : Serializable {
+    private val baseUrl =
+        "${if (ssl) "https" else "http"}://${host}${if (port == null) "" else ":${port}"}"
+
+    init {
+        Log.d("CSDN_DEBUG_API", "api_baseurl=${baseUrl}")
+    }
+
     companion object {
         private const val serialVersionUID = 13546100697343249L
     }

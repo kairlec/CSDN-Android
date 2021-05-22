@@ -50,12 +50,16 @@ import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.insets.statusBarsPadding
-import tem.csdn.compose.jetchat.chat.ChatAPI
+import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
 
 @Composable
-fun ProfileScreen(userData: User, chatAPI: ChatAPI, onNavIconPressed: () -> Unit = { }) {
-
+fun ProfileScreen(
+    userData: User,
+    meProfile: User,
+    chatServer: ChatServer,
+    onNavIconPressed: () -> Unit = { }
+) {
     var functionalityNotAvailablePopupShown by remember { mutableStateOf(false) }
     if (functionalityNotAvailablePopupShown) {
         FunctionalityNotAvailablePopup { functionalityNotAvailablePopupShown = false }
@@ -96,14 +100,14 @@ fun ProfileScreen(userData: User, chatAPI: ChatAPI, onNavIconPressed: () -> Unit
                         scrollState,
                         userData,
                         this@BoxWithConstraints.maxHeight,
-                        chatAPI
+                        chatServer
                     )
                     UserInfoFields(userData, this@BoxWithConstraints.maxHeight)
                 }
             }
             ProfileFab(
                 extended = scrollState.value == 0,
-                userIsMe = userData.isMe(),
+                userIsMe = userData.displayId == meProfile.displayId,
                 modifier = Modifier.align(Alignment.BottomEnd),
                 onFabClicked = { functionalityNotAvailablePopupShown = true }
             )
@@ -179,22 +183,20 @@ private fun ProfileHeader(
     scrollState: ScrollState,
     data: User,
     containerHeight: Dp,
-    chatAPI: ChatAPI,
+    chatServer: ChatServer,
 ) {
     val offset = (scrollState.value / 2)
     val offsetDp = with(LocalDensity.current) { offset.toDp() }
 
-    data.getPhotoPainter(chatAPI)?.let {
-        Image(
-            modifier = Modifier
-                .heightIn(max = containerHeight / 2)
-                .fillMaxWidth()
-                .padding(top = offsetDp),
-            painter = it,
-            contentScale = ContentScale.Crop,
-            contentDescription = null
-        )
-    }
+    Image(
+        modifier = Modifier
+            .heightIn(max = containerHeight / 2)
+            .fillMaxWidth()
+            .padding(top = offsetDp),
+        painter = data.getPhotoPainterOrDefault(chatServer),
+        contentScale = ContentScale.Crop,
+        contentDescription = null
+    )
 }
 
 @Composable

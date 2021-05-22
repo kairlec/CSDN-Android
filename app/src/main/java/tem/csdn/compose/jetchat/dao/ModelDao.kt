@@ -16,6 +16,9 @@ interface UserDao {
     @Query("SELECT * FROM users")
     fun getAll(): List<User>
 
+    @Query("SELECT * FROM users WHERE displayId = :displayId")
+    fun getByDisplayId(displayId:String): User?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun update(vararg users: User)
 }

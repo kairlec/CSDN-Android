@@ -2,8 +2,6 @@ package tem.csdn.compose.jetchat.profile
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import tem.csdn.compose.jetchat.data.colleagueProfile
-import tem.csdn.compose.jetchat.data.meProfile
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 
 //@Preview(widthDp = 340, name = "340 width - Me")

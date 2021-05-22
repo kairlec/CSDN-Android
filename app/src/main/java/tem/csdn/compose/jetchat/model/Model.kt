@@ -7,6 +7,7 @@ import androidx.room.*
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.conversation.avatarImage
+import tem.csdn.compose.jetchat.conversation.image
 import tem.csdn.compose.jetchat.data.ChatServer
 import java.io.Serializable
 
@@ -16,8 +17,29 @@ data class Message(
     val timestamp: Int,
     val image: Boolean?,
     val author: User,
+    val chatServer: ChatServer
 ) {
     fun toLocal(): LocalMessage = LocalMessage(id, content, timestamp, image, author.displayId)
+
+    @Composable
+    fun getImagePainter(): Painter? {
+        return if (image == true) {
+            image(
+                url = chatServer.chatAPI.image(
+                    ChatAPI.ImageType.IMAGE,
+                    id.toString()
+                )
+            )
+        } else {
+            null
+        }
+    }
+
+    @Composable
+    fun getImagePainterOrDefault(): Painter {
+        return getImagePainter() ?: painterResource(id = R.drawable.ic_broken_cable)
+    }
+
 }
 
 @Entity(tableName = "users")
@@ -35,20 +57,18 @@ data class User(
         private const val serialVersionUID = 47073173576278320L
     }
 
-    fun isMe() = displayId == ChatServer.currentChatServer.meProfile.displayId
-
     @Composable
-    fun getPhotoPainter(chatAPI: ChatAPI): Painter? {
+    fun getPhotoPainter(chatServer: ChatServer): Painter? {
         return if (photo == true) {
-            avatarImage(url = chatAPI.image(ChatAPI.ImageType.PHOTO, displayId))
+            avatarImage(url = chatServer.chatAPI.image(ChatAPI.ImageType.PHOTO, displayId))
         } else {
             null
         }
     }
 
     @Composable
-    fun getPhotoPainterOrDefault(chatAPI: ChatAPI): Painter {
-        return getPhotoPainter(chatAPI) ?: painterResource(id = R.drawable.ic_default_avatar_man)
+    fun getPhotoPainterOrDefault(chatServer: ChatServer): Painter {
+        return getPhotoPainter(chatServer) ?: painterResource(id = R.drawable.ic_default_avatar_man)
     }
 
     override fun compareTo(other: User): Int {
@@ -65,8 +85,8 @@ data class LocalMessage(
     val image: Boolean?,
     val authorDisplayId: String
 ) {
-    fun toNonLocal(users: Map<String, User>): Message {
-        return Message(id, content, timestamp, image, users[authorDisplayId]!!)
+    fun toNonLocal(users: Map<String, User>, chatServer: ChatServer): Message {
+        return Message(id, content, timestamp, image, users[authorDisplayId]!!, chatServer)
     }
 }
 

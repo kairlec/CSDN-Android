@@ -63,7 +63,10 @@ import com.google.accompanist.insets.navigationBarsWithImePadding
 import com.google.accompanist.insets.statusBarsPadding
 import com.google.accompanist.insets.toPaddingValues
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import tem.csdn.compose.jetchat.chat.ChatAPI
+import tem.csdn.compose.jetchat.data.ChatServer
+import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import java.time.LocalDateTime
 import java.time.LocalDate
@@ -84,7 +87,8 @@ fun ConversationContent(
     navigateToProfile: (User) -> Unit,
     getProfile: (String) -> User?,
     modifier: Modifier = Modifier,
-    chatAPI: ChatAPI,
+    chatServer: ChatServer,
+    meProfile: User,
     onNavIconPressed: () -> Unit = { }
 ) {
     val scrollState = rememberLazyListState()
@@ -98,12 +102,13 @@ fun ConversationContent(
                     navigateToProfile = navigateToProfile,
                     modifier = Modifier.weight(1f),
                     scrollState = scrollState,
-                    chatAPI = chatAPI,
-                    getProfile = getProfile
+                    chatServer = chatServer,
+                    getProfile = getProfile,
+                    meProfile = meProfile
                 )
                 UserInput(
                     onMessageSent = { content ->
-                        uiState.addMessage(content)
+                        runBlocking { chatServer.inputChannel.send(content) }
                     },
                     resetScroll = {
                         scope.launch {
@@ -117,8 +122,8 @@ fun ConversationContent(
             }
             // Channel name bar floats above the messages
             ChannelNameBar(
-                channelName = uiState.channelName,
-                channelMembers = uiState.channelMembers,
+                channelName = uiState.chatData.displayName,
+                channelMembers = uiState.onlineMembers,
                 onNavIconPressed = onNavIconPressed,
                 // Use statusBarsPadding() to move the app bar content below the status bar
                 modifier = Modifier.statusBarsPadding(),
@@ -194,7 +199,8 @@ fun Messages(
     scrollState: LazyListState,
     modifier: Modifier = Modifier,
     getProfile: (String) -> User?,
-    chatAPI: ChatAPI
+    chatServer: ChatServer,
+    meProfile: User
 ) {
     val today = LocalDateTime.of(LocalDate.now(), LocalTime.MIN)
     val yesterday = today.plusDays(-1)
@@ -229,7 +235,11 @@ fun Messages(
 
                 // Hardcode day dividers for simplicity
                 val msgTime =
-                    LocalDateTime.ofEpochSecond(content.timestamp, 0, OffsetDateTime.now().offset)
+                    LocalDateTime.ofEpochSecond(
+                        content.timestamp.toLong(),
+                        0,
+                        OffsetDateTime.now().offset
+                    )
 
                 fun draw() {
                     item {
@@ -282,11 +292,11 @@ fun Messages(
                     Message(
                         onAuthorClick = { displayId -> navigateToProfile(displayId) },
                         msg = content,
-                        isUserMe = content.author.isMe(),
+                        isUserMe = content.author.displayId == meProfile.displayId,
                         isFirstMessageByAuthor = isFirstMessageByAuthor,
                         isLastMessageByAuthor = isLastMessageByAuthor,
                         msgTimeString = msgTimeString,
-                        chatAPI = chatAPI,
+                        chatServer = chatServer,
                         getProfile = getProfile
                     )
                 }
@@ -299,7 +309,7 @@ fun Messages(
                     } else {
                         val nextMsgTime =
                             LocalDateTime.ofEpochSecond(
-                                nextMessage.timestamp,
+                                nextMessage.timestamp.toLong(),
                                 0,
                                 OffsetDateTime.now().offset
                             )
@@ -351,7 +361,7 @@ fun Message(
     isFirstMessageByAuthor: Boolean,
     isLastMessageByAuthor: Boolean,
     msgTimeString: String,
-    chatAPI: ChatAPI
+    chatServer: ChatServer
 ) {
     val borderColor = if (isUserMe) {
         MaterialTheme.colors.primary
@@ -372,7 +382,7 @@ fun Message(
                     .border(3.dp, MaterialTheme.colors.surface, CircleShape)
                     .clip(CircleShape)
                     .align(Alignment.Top),
-                painter = msg.author.getPhotoPainterOrDefault(chatAPI),
+                painter = msg.author.getPhotoPainterOrDefault(chatServer),
                 contentScale = ContentScale.Crop,
                 contentDescription = null,
             )
