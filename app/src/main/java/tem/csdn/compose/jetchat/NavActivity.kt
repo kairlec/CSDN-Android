@@ -99,7 +99,8 @@ class NavActivity : AppCompatActivity() {
                         }
 
                         val chatServer by chatViewModel.chatServer.observeAsState()
-                        Log.d("CSDN_CON","main:chatServer=${chatServer}")
+                        val chatServerOnline by chatViewModel.webSocketStatus.observeAsState(false)
+                        Log.d("CSDN_CON", "main:chatServer=${chatServer}")
                         JetchatScaffold(
                             scaffoldState,
                             onChatClicked = {
@@ -118,7 +119,8 @@ class NavActivity : AppCompatActivity() {
                             },
                             chat = chatData!!,
                             profiles = profiles.values,
-                            chatServer = chatServer!!
+                            chatServer = chatServer!!,
+                            chatServerOffline = !chatServerOnline
                         ) {
                             AndroidViewBinding(ContentMainBinding::inflate)
                         }

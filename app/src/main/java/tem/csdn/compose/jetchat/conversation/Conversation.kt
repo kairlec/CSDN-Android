@@ -64,7 +64,6 @@ import com.google.accompanist.insets.statusBarsPadding
 import com.google.accompanist.insets.toPaddingValues
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.data.RawWebSocketFrameWrapper
@@ -87,6 +86,7 @@ import java.time.OffsetDateTime
 fun ConversationContent(
 //    uiState: ConversationUiState,
     chatData: ChatDataScreenState,
+    chatServerOffline: Boolean,
     onlineMembers: Int,
     messages: List<Message>,
     navigateToProfile: (User) -> Unit,
@@ -131,9 +131,14 @@ fun ConversationContent(
                     modifier = Modifier.navigationBarsWithImePadding(),
                 )
             }
+            val channelName = if (chatServerOffline) {
+                "${chatData.displayName}(${stringResource(id = R.string.offline)})"
+            } else {
+                chatData.displayName
+            }
             // Channel name bar floats above the messages
             ChannelNameBar(
-                channelName = chatData.displayName,
+                channelName = channelName,
                 channelMembers = onlineMembers,
                 onNavIconPressed = onNavIconPressed,
                 // Use statusBarsPadding() to move the app bar content below the status bar
@@ -291,13 +296,16 @@ fun Messages(
                     val msgTimeString = if (DateFormat.is24HourFormat(LocalContext.current)) {
                         "%02d:%02d".format(msgTime.hour, msgTime.minute)
                     } else {
-                        val (ap, hour) = stringResource(
-                            if (msgTime.hour >= 12) {
-                                R.string.pm_time_format
-                            } else {
-                                R.string.am_time_format
-                            }
-                        ) to msgTime.hour - 12
+                        val ap = if (msgTime.hour >= 12) {
+                            stringResource(id = R.string.pm_time_format)
+                        } else {
+                            stringResource(id = R.string.am_time_format)
+                        }
+                        val hour = if (msgTime.hour >= 13) {
+                            msgTime.hour - 12
+                        } else {
+                            msgTime.hour
+                        }
                         "%s %02d:%02d".format(ap, hour, msgTime.minute)
                     }
                     Message(

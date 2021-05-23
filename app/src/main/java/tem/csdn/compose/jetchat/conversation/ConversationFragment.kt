@@ -54,6 +54,7 @@ class ConversationFragment : Fragment() {
             val meProfile by chatViewModel.meProfile.observeAsState()
             val messages by chatViewModel.allMessages.observeAsState(emptyList())
             val onlineMembers by chatViewModel.onlineMembers.observeAsState(0)
+            val online by chatViewModel.webSocketStatus.observeAsState(false)
             Log.d("CSDN_CON", "chatData=${chatData}")
             Log.d("CSDN_CON", "chatServer=${chatServer}")
             Log.d("CSDN_CON", "meProfile=${meProfile}")
@@ -90,7 +91,8 @@ class ConversationFragment : Fragment() {
                             getProfile = {
                                 chatServer!!.userDao.getByDisplayId(it)
                             },
-                            meProfile = meProfile!!
+                            meProfile = meProfile!!,
+                            chatServerOffline = !online
                         )
                     }
                 }

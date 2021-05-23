@@ -6,7 +6,7 @@
     <string name="jumpBottom">Jump to bottom</string>
     <string name="send">Send</string>
     <string name="author_me">Me</string>
-    <string name="members">%d Members</string>
+    <string name="members">%d Members Online</string>
     <string name="textfield_hint">say something…</string>
     <string name="emojis_label">emojis</string>
     <string name="stickers_label">stickers</string>
@@ -43,4 +43,5 @@
     <string name="wait_for_server_sync">Syncing with server</string>
     <string name="init_app">Application initialization</string>
     <string name="handle_server_data">Processing data</string>
+    <string name="offline">offline</string>
 </resources>

@@ -41,6 +41,7 @@ fun ColumnScope.JetchatDrawer(
     onChatClicked: () -> Unit,
     chat: ChatDataScreenState,
     chatServer: ChatServer,
+    chatServerOffline: Boolean,
     profiles: Iterable<User>
 ) {
     // Use statusBarsHeight() to add a spacer which pushes the drawer content
@@ -48,8 +49,13 @@ fun ColumnScope.JetchatDrawer(
     Spacer(Modifier.statusBarsHeight())
     DrawerHeader()
     Divider()
+    val channelName = if (chatServerOffline) {
+        "${chat.displayName}(${stringResource(id = R.string.offline)})"
+    } else {
+        chat.displayName
+    }
     DrawerItemHeader(stringResource(id = R.string.chat_header))
-    ChatItem(chat.displayName, true, chat.photo) {
+    ChatItem(channelName, true, chat.photo) {
         onChatClicked()
     }
     DrawerItemHeader(stringResource(id = R.string.profile_header))

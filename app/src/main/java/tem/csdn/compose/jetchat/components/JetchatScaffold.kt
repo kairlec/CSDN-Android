@@ -19,6 +19,7 @@ fun JetchatScaffold(
     chat: ChatDataScreenState,
     profiles: Iterable<User>,
     chatServer: ChatServer,
+    chatServerOffline: Boolean,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     JetchatTheme {
@@ -30,7 +31,8 @@ fun JetchatScaffold(
                     onChatClicked = onChatClicked,
                     chat = chat,
                     profiles = profiles,
-                    chatServer = chatServer
+                    chatServer = chatServer,
+                    chatServerOffline = chatServerOffline
                 )
             },
             content = content

@@ -2,6 +2,7 @@ package tem.csdn.compose.jetchat.util
 
 import android.util.Log
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.cookies.*
@@ -14,6 +15,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
 import tem.csdn.compose.jetchat.data.*
+import java.lang.Exception
 
 
 val client = HttpClient(CIO) {
@@ -50,23 +52,38 @@ suspend fun connectWebSocketToServer(
                 }
             }) {
             onConnected(this)
-            val messageOutputRoutine = launch { outputMessages(outputMessageChannel) }
-            val userInputRoutine = launch { inputMessages(objectMapper, inputMessageChannel) }
+            val messageOutputRoutine = launch { outputMessages(objectMapper, outputMessageChannel) }
+            val userInputRoutine = launch {
+                inputMessages(objectMapper, inputMessageChannel) {
+                    this@webSocket.close(CloseReason(CloseReason.Codes.NORMAL, "send error"))
+                }
+            }
 
             userInputRoutine.join()
             messageOutputRoutine.cancelAndJoin()
         }
     } finally {
+        Log.i("CSDN_DEBUG", "websocket has be disconnected")
         onDisconnected()
     }
 }
 
-suspend fun DefaultClientWebSocketSession.outputMessages(outputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>) {
+suspend fun DefaultClientWebSocketSession.outputMessages(
+    objectMapper: ObjectMapper,
+    outputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>
+) {
     try {
         for (message in incoming) {
+            Log.d("CSDN_DEBUG", "receive frame:${message}")
             when (message) {
                 is Frame.Text -> {
-                    outputMessageChannel.send(RawWebSocketFrameWrapper.ofText(message.readText()))
+                    val text = message.readText()
+                    val rawWrapper = try {
+                        RawWebSocketFrameWrapper.ofTextWrapper(objectMapper.readValue(text))
+                    } catch (e: Exception) {
+                        RawWebSocketFrameWrapper.ofText(text)
+                    }
+                    outputMessageChannel.send(rawWrapper)
                 }
                 is Frame.Binary -> {
                     outputMessageChannel.send(RawWebSocketFrameWrapper.ofBinary(message.readBytes()))
@@ -82,9 +99,11 @@ suspend fun DefaultClientWebSocketSession.outputMessages(outputMessageChannel: C
 
 suspend fun DefaultClientWebSocketSession.inputMessages(
     objectMapper: ObjectMapper,
-    inputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>
+    inputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>,
+    onSendFailed: suspend () -> Unit,
 ) {
     for (rawWebSocketFrameWrapper in inputMessageChannel) {
+        var needClose = false
         rawWebSocketFrameWrapper.ifRawText {
             if (!sendRetry(
                     Frame.Text(
@@ -97,12 +116,32 @@ suspend fun DefaultClientWebSocketSession.inputMessages(
                 )
             ) {
                 Log.e("CSDN_WEBSOCKET_SEND", "send error")
+                needClose = true
+                onSendFailed()
+            }
+        }
+        rawWebSocketFrameWrapper.ifTextWrapper(objectMapper) {
+            if (!sendRetry(
+                    Frame.Text(
+                        objectMapper.writeValueAsString(it)
+                    )
+                )
+            ) {
+                Log.e("CSDN_WEBSOCKET_SEND", "send error")
+                needClose = true
+                onSendFailed()
             }
         }
         rawWebSocketFrameWrapper.ifBinary(objectMapper) {
             if (!sendRetry(Frame.Binary(false, it))) {
                 Log.e("CSDN_WEBSOCKET_SEND", "send error")
+                needClose = true
+                onSendFailed()
             }
+        }
+        if (needClose) {
+            Log.i("CSDN_DEBUG", "send failed and receive channel need to pause")
+            break
         }
     }
 }

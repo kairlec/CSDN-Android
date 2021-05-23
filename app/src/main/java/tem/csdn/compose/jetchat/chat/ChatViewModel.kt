@@ -16,9 +16,7 @@ import androidx.room.Room
 import com.fasterxml.jackson.module.kotlin.convertValue
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import tem.csdn.compose.jetchat.R
-import tem.csdn.compose.jetchat.conversation.Message
 import tem.csdn.compose.jetchat.conversation.avatarImage
 import tem.csdn.compose.jetchat.dao.AppDatabase
 import tem.csdn.compose.jetchat.data.*
@@ -28,7 +26,6 @@ import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.util.UUIDHelper
 import tem.csdn.compose.jetchat.util.client
 import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
 
 class ChatViewModel : ViewModel() {
     private fun withNewInitProgress(progress: Float, @StringRes textId: Int? = null) {
@@ -170,7 +167,7 @@ class ChatViewModel : ViewModel() {
             val allMessage = messageDao.getAll().map {
                 Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
                 it.toNonLocal(allUserMap)
-            }
+            }.sortedByDescending { it.id }
             var lastHeartBeatUUIDString: String? = null
             var heartBeatJob: Job? = null
             launch {
@@ -190,12 +187,9 @@ class ChatViewModel : ViewModel() {
                                 }
                                 lastHeartBeatUUIDString = UUID.randomUUID().toString()
                                 chatServer.inputChannel.send(
-                                    RawWebSocketFrameWrapper.ofText(
-                                        chatServer.objectMapper.writeValueAsString(
-                                            TextWebSocketFrameWrapper(
-                                                TextWebSocketFrameWrapper.FrameType.HEARTBEAT,
-                                                lastHeartBeatUUIDString
-                                            )
+                                    RawWebSocketFrameWrapper.ofTextWrapper(
+                                        TextWebSocketFrameWrapper.ofHeartbeat(
+                                            lastHeartBeatUUIDString!!
                                         )
                                     )
                                 )
@@ -219,7 +213,7 @@ class ChatViewModel : ViewModel() {
             launch {
                 for (rawWebSocketFrameWrapper in chatServer.outputChannel) {
                     try {
-                        rawWebSocketFrameWrapper.ifText(chatServer.objectMapper) {
+                        rawWebSocketFrameWrapper.ifTextWrapper(chatServer.objectMapper) {
                             when (it.type) {
                                 TextWebSocketFrameWrapper.FrameType.MESSAGE -> {
                                     val msg =
@@ -227,7 +221,7 @@ class ChatViewModel : ViewModel() {
                                     Log.d("CSDN_DEBUG_RECEIVE", "new msg:${msg}")
                                     messageDao.update(msg.toLocal())
                                     withContext(Dispatchers.Main) {
-                                        _allMessages.value?.add(msg)
+                                        _allMessages.value?.add(0, msg)
                                     }
                                 }
                                 TextWebSocketFrameWrapper.FrameType.NEW_CONNECTION -> {
@@ -257,13 +251,8 @@ class ChatViewModel : ViewModel() {
                                         chatServer.objectMapper.convertValue<String>(it.content!!)
                                     Log.d("CSDN_DEBUG", "HEARTBEAT")
                                     chatServer.inputChannel.send(
-                                        RawWebSocketFrameWrapper.ofText(
-                                            chatServer.objectMapper.writeValueAsString(
-                                                TextWebSocketFrameWrapper(
-                                                    TextWebSocketFrameWrapper.FrameType.HEARTBEAT_ACK,
-                                                    content
-                                                )
-                                            )
+                                        RawWebSocketFrameWrapper.ofTextWrapper(
+                                            TextWebSocketFrameWrapper.ofHeartbeatAck(content)
                                         )
                                     )
                                 }
