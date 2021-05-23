@@ -43,47 +43,50 @@ class ChatViewModel : ViewModel() {
 
     private suspend fun reload() {
         reloading = true
-        coroutineScope {
-            val count = chatServer.value!!.getOnlineNumber()
-            withContext(Dispatchers.Main) {
-                _onlineMembers.value = count
-                Log.d("CSDN_UPDATE", "reload online members success")
+        try {
+            coroutineScope {
+                val count = chatServer.value!!.getOnlineNumber()
+                withContext(Dispatchers.Main) {
+                    _onlineMembers.value = count
+                    Log.d("CSDN_UPDATE", "reload online members success")
+                }
+                val newMessages = chatServer.value!!.getMessages().map { it.toLocal() }
+                withContext(Dispatchers.Main) {
+                    withNewInitProgress(0.1f)
+                }
+                chatServer.value!!.messageDao.update(*newMessages.toTypedArray())
+                withContext(Dispatchers.Main) {
+                    withNewInitProgress(0.1f)
+                }
+                val newProfiles = chatServer.value!!.getProfiles()
+                withContext(Dispatchers.Main) {
+                    withNewInitProgress(0.1f)
+                }
+                chatServer.value!!.userDao.update(*newProfiles.toTypedArray())
+                withContext(Dispatchers.Main) {
+                    withNewInitProgress(0.1f, R.string.handle_server_data)
+                }
+                val allUser =
+                    chatServer.value!!.userDao.getAll().map { it.displayId to it }.toTypedArray()
+                val allUserMap = mutableStateMapOf(*allUser)
+                withContext(Dispatchers.Main) {
+                    this@ChatViewModel._allProfiles.value = allUserMap
+                    withNewInitProgress(0.1f)
+                }
+                val allMessage = chatServer.value!!.messageDao.getAll().map {
+                    Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
+                    it.toNonLocal(allUserMap)
+                }
+                withContext(Dispatchers.Main) {
+                    this@ChatViewModel._allMessages.value =
+                        mutableStateListOf(*allMessage.toTypedArray())
+                    Log.d("CSDN_UPDATE", "reload all messages success")
+                    withNewInitProgress(0.1f)
+                }
             }
-            val newMessages = chatServer.value!!.getMessages().map { it.toLocal() }
-            withContext(Dispatchers.Main) {
-                withNewInitProgress(0.1f)
-            }
-            chatServer.value!!.messageDao.update(*newMessages.toTypedArray())
-            withContext(Dispatchers.Main) {
-                withNewInitProgress(0.1f)
-            }
-            val newProfiles = chatServer.value!!.getProfiles()
-            withContext(Dispatchers.Main) {
-                withNewInitProgress(0.1f)
-            }
-            chatServer.value!!.userDao.update(*newProfiles.toTypedArray())
-            withContext(Dispatchers.Main) {
-                withNewInitProgress(0.1f, R.string.handle_server_data)
-            }
-            val allUser =
-                chatServer.value!!.userDao.getAll().map { it.displayId to it }.toTypedArray()
-            val allUserMap = mutableStateMapOf(*allUser)
-            withContext(Dispatchers.Main) {
-                this@ChatViewModel._allProfiles.value = allUserMap
-                withNewInitProgress(0.1f)
-            }
-            val allMessage = chatServer.value!!.messageDao.getAll().map {
-                Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
-                it.toNonLocal(allUserMap)
-            }
-            withContext(Dispatchers.Main) {
-                this@ChatViewModel._allMessages.value =
-                    mutableStateListOf(*allMessage.toTypedArray())
-                Log.d("CSDN_UPDATE", "reload all messages success")
-                withNewInitProgress(0.1f)
-            }
+        } finally {
+            reloading = false
         }
-        reloading = false
     }
 
     fun initIfNeed(context: Context) {
@@ -103,7 +106,7 @@ class ChatViewModel : ViewModel() {
             withContext(Dispatchers.Main) {
                 withNewInitProgress(0.1f)
             }
-            val chatAPI = ChatAPI(true, "csdnmsg.kairlec.com")
+            val chatAPI = ChatAPI(false, "120.77.179.218",18080)
             Log.d("CSDN_DEBUG", "ready to create chatServer")
             val chatServer = ChatServer(
                 chatAPI,
@@ -169,38 +172,53 @@ class ChatViewModel : ViewModel() {
                 it.toNonLocal(allUserMap)
             }.sortedByDescending { it.id }
             var lastHeartBeatUUIDString: String? = null
-            var heartBeatJob: Job? = null
             launch {
+                var heartBeatJob: Job? = null
                 while (true) {
-                    chatServer.connect({
-                        heartBeatJob = launch {
-                            while (true) {
-                                if (lastHeartBeatUUIDString != null) {
-                                    val exp = HeartBeatException.HeartBeatTimeoutException()
-                                    close(
-                                        CloseReason(
-                                            CloseReason.Codes.CANNOT_ACCEPT,
-                                            exp.toString()
+                    try {
+                        chatServer.connect({
+                            heartBeatJob = launch {
+                                while (true) {
+                                    if (lastHeartBeatUUIDString != null) {
+                                        val exp = HeartBeatException.HeartBeatTimeoutException()
+                                        close(
+                                            CloseReason(
+                                                CloseReason.Codes.CANNOT_ACCEPT,
+                                                exp.toString()
+                                            )
+                                        )
+                                        break
+                                    }
+                                    lastHeartBeatUUIDString = UUID.randomUUID().toString()
+                                    chatServer.inputChannel.send(
+                                        RawWebSocketFrameWrapper.ofTextWrapper(
+                                            TextWebSocketFrameWrapper.ofHeartbeat(
+                                                lastHeartBeatUUIDString!!
+                                            )
                                         )
                                     )
-                                    break
+                                    //30s心跳一次
+                                    delay(30_000)
                                 }
-                                lastHeartBeatUUIDString = UUID.randomUUID().toString()
-                                chatServer.inputChannel.send(
-                                    RawWebSocketFrameWrapper.ofTextWrapper(
-                                        TextWebSocketFrameWrapper.ofHeartbeat(
-                                            lastHeartBeatUUIDString!!
-                                        )
-                                    )
-                                )
-                                //30s心跳一次
-                                delay(30_000)
+                            }
+                        }) {
+                            heartBeatJob?.cancel()
+                            //断开就重新加载并重连
+                            while (true) {
+                                try {
+                                    if (!reloading) {
+                                        reload()
+                                        break
+                                    }
+                                } catch (e: Throwable) {
+                                    Log.d("CSDN_DEBUG", "try reload error, delay 3000 and retry", e)
+                                }
+                                delay(3000)
                             }
                         }
-                    }) {
-                        heartBeatJob?.cancel()
-                        //断开就重新加载并重连
-                        reload()
+                    } catch (e: Throwable) {
+                        Log.d("CSDN_DEBUG", "try connect error, delay 3000 and retry", e)
+                        delay(3000)
                     }
                 }
             }
@@ -278,6 +296,9 @@ class ChatViewModel : ViewModel() {
                             }
                         }
                         rawWebSocketFrameWrapper.ifBinary(chatServer.objectMapper) {
+                            //TODO 保留
+                        }
+                        rawWebSocketFrameWrapper.ifRawText {
                             //TODO 保留
                         }
                     } catch (e: Throwable) {

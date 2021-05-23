@@ -10,7 +10,6 @@ import io.ktor.client.features.json.*
 import io.ktor.client.features.websocket.*
 import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
@@ -20,7 +19,7 @@ import java.lang.Exception
 
 val client = HttpClient(CIO) {
     install(WebSockets) {
-        pingInterval = 30_000
+        pingInterval = 5_000
     }
     install(JsonFeature)
     install(HttpCookies) {
@@ -40,6 +39,7 @@ suspend fun connectWebSocketToServer(
     onConnected: suspend (DefaultClientWebSocketSession) -> Unit,
     onDisconnected: suspend () -> Unit,
 ) {
+    var inSession = false
     try {
         client.webSocket(
             method = method,
@@ -51,20 +51,31 @@ suspend fun connectWebSocketToServer(
                     url.protocol = URLProtocol.WSS
                 }
             }) {
+            inSession = true
             onConnected(this)
-            val messageOutputRoutine = launch { outputMessages(objectMapper, outputMessageChannel) }
-            val userInputRoutine = launch {
-                inputMessages(objectMapper, inputMessageChannel) {
-                    this@webSocket.close(CloseReason(CloseReason.Codes.NORMAL, "send error"))
+            try {
+                val messageOutputRoutine =
+                    launch { outputMessages(objectMapper, outputMessageChannel) }
+                val userInputRoutine = launch {
+                    inputMessages(objectMapper, inputMessageChannel) {
+                        this@webSocket.close(CloseReason(CloseReason.Codes.NORMAL, "send error"))
+                    }
                 }
+                Log.d("CSDN_DEBUG", "wait to input routine")
+                userInputRoutine.join()
+                Log.d("CSDN_DEBUG", "input pause, ready to cancel output")
+                messageOutputRoutine.cancel()
+                Log.d("CSDN_DEBUG", "cancel output")
+            } finally {
+                Log.d("CSDN_DEBUG", "websocket has be disconnected")
+                onDisconnected()
             }
-
-            userInputRoutine.join()
-            messageOutputRoutine.cancelAndJoin()
         }
     } finally {
-        Log.i("CSDN_DEBUG", "websocket has be disconnected")
-        onDisconnected()
+        if (!inSession) {
+            Log.d("CSDN_DEBUG", "websocket has be disconnected")
+            onDisconnected()
+        }
     }
 }
 
@@ -140,7 +151,7 @@ suspend fun DefaultClientWebSocketSession.inputMessages(
             }
         }
         if (needClose) {
-            Log.i("CSDN_DEBUG", "send failed and receive channel need to pause")
+            Log.d("CSDN_DEBUG", "send failed and receive channel need to pause")
             break
         }
     }

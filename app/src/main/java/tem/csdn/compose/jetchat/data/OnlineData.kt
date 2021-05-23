@@ -67,7 +67,10 @@ class ChatServer(
         }
     }
 
-    suspend fun connect(onConnect: suspend DefaultClientWebSocketSession.() -> Unit, onDisconnect: suspend () -> Unit) {
+    suspend fun connect(
+        onConnect: suspend DefaultClientWebSocketSession.() -> Unit,
+        onDisconnect: suspend () -> Unit
+    ) {
         connectWebSocketToServer(
             ssl = chatAPI.ssl,
             host = chatAPI.host,
