@@ -8,7 +8,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -17,12 +16,12 @@ import com.fasterxml.jackson.module.kotlin.convertValue
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.*
 import tem.csdn.compose.jetchat.R
-import tem.csdn.compose.jetchat.conversation.avatarImage
 import tem.csdn.compose.jetchat.dao.AppDatabase
 import tem.csdn.compose.jetchat.data.*
 import tem.csdn.compose.jetchat.model.HeartBeatException
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.MediaFileCacheHelper
 import tem.csdn.compose.jetchat.util.UUIDHelper
 import tem.csdn.compose.jetchat.util.client
 import java.util.*
@@ -97,6 +96,8 @@ class ChatViewModel : ViewModel() {
         Log.i("CSDN_INIT", "app start up initializer start")
         MainScope().launch(Dispatchers.IO) {
             val uuid = UUIDHelper[context]
+            val mediaFileCacheHelper = MediaFileCacheHelper()
+            mediaFileCacheHelper.initDiskLruCache(context, 1)
             val db = Room
                 .databaseBuilder(context, AppDatabase::class.java, "database-csdn-android")
                 .build()
@@ -106,7 +107,7 @@ class ChatViewModel : ViewModel() {
             withContext(Dispatchers.Main) {
                 withNewInitProgress(0.1f)
             }
-            val chatAPI = ChatAPI(false, "120.77.179.218",18080)
+            val chatAPI = ChatAPI(false, "120.77.179.218", 18080)
             Log.d("CSDN_DEBUG", "ready to create chatServer")
             val chatServer = ChatServer(
                 chatAPI,
@@ -114,7 +115,8 @@ class ChatViewModel : ViewModel() {
                 client,
                 lastMessage?.id,
                 messageDao,
-                userDao
+                userDao,
+                this
             ) {
                 Log.d("CSDN_DEBUG_WEBSOCKET_STATUS", "status = $it")
                 withContext(Dispatchers.Main) {
@@ -136,10 +138,7 @@ class ChatViewModel : ViewModel() {
             val chatName = chatServer.getChatDisplayName()
             val count = chatServer.getOnlineNumber()
             withContext(Dispatchers.Main) {
-                _chatData.value = ChatDataScreenState(
-                    chatServer.chatAPI.image(ChatAPI.ImageType.CHAT, "0"),
-                    chatName
-                )
+                _chatData.value = ChatDataScreenState(chatName)
                 Log.d("CSDN_UPDATE", "update chatData success")
                 _onlineMembers.value = count
                 Log.d("CSDN_UPDATE", "update online members success")
@@ -170,15 +169,16 @@ class ChatViewModel : ViewModel() {
             val allMessage = messageDao.getAll().map {
                 Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
                 it.toNonLocal(allUserMap)
-            }.sortedByDescending { it.id }
+            }
             var lastHeartBeatUUIDString: String? = null
             launch {
                 var heartBeatJob: Job? = null
-                while (true) {
+                while (isActive) {
                     try {
                         chatServer.connect({
+                            Log.d("CSDN_DEBUG", "server has connect,start to heartbeat")
                             heartBeatJob = launch {
-                                while (true) {
+                                while (isActive) {
                                     if (lastHeartBeatUUIDString != null) {
                                         val exp = HeartBeatException.HeartBeatTimeoutException()
                                         close(
@@ -190,7 +190,8 @@ class ChatViewModel : ViewModel() {
                                         break
                                     }
                                     lastHeartBeatUUIDString = UUID.randomUUID().toString()
-                                    chatServer.inputChannel.send(
+                                    Log.d("CSDN_HEARTBEAT", "New Heartbeat")
+                                    chatServer.send(
                                         RawWebSocketFrameWrapper.ofTextWrapper(
                                             TextWebSocketFrameWrapper.ofHeartbeat(
                                                 lastHeartBeatUUIDString!!
@@ -202,9 +203,10 @@ class ChatViewModel : ViewModel() {
                                 }
                             }
                         }) {
+                            Log.d("CSDN_DEBUG", "websocket has disconnect,stop heartbeat job")
                             heartBeatJob?.cancel()
                             //断开就重新加载并重连
-                            while (true) {
+                            while (isActive) {
                                 try {
                                     if (!reloading) {
                                         reload()
@@ -268,7 +270,7 @@ class ChatViewModel : ViewModel() {
                                     val content =
                                         chatServer.objectMapper.convertValue<String>(it.content!!)
                                     Log.d("CSDN_DEBUG", "HEARTBEAT")
-                                    chatServer.inputChannel.send(
+                                    chatServer.send(
                                         RawWebSocketFrameWrapper.ofTextWrapper(
                                             TextWebSocketFrameWrapper.ofHeartbeatAck(content)
                                         )
@@ -332,19 +334,10 @@ class ChatViewModel : ViewModel() {
 
 @Immutable
 data class ChatDataScreenState(
-    // 群聊图片(头像)
-    val photo: String?,
     val displayName: String,
 ) {
     @Composable
-    fun getPhotoPainter(): Painter? {
-        if (photo == null) {
-            return null
-        }
-        return if (photo.startsWith("http")) {
-            avatarImage(url = photo)
-        } else {
-            photo.toIntOrNull()?.let { painterResource(id = it) }
-        }
+    fun getPhotoPainter(chatServer: ChatServer): String {
+        return chatServer.chatAPI.image(ChatAPI.ImageType.CHAT, "0")
     }
 }

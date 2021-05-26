@@ -11,11 +11,13 @@ object Libs {
     const val junit = "junit:junit:4.13"
 
     const val material = "com.google.android.material:material:1.3.0"
+    const val disklrucache = "com.jakewharton:disklrucache:2.0.2"
 
     object Accompanist {
         private const val version = "0.10.0"
         const val insets = "com.google.accompanist:accompanist-insets:$version"
         const val glide = "com.google.accompanist:accompanist-glide:$version"
+        const val glide_okhttp3 = "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     }
 
     object Kotlin {
@@ -34,6 +36,8 @@ object Libs {
         const val serialization = "io.ktor:ktor-client-serialization:$version"
         const val logging = "io.ktor:ktor-client-logging-jvm:$version"
         const val cio = "io.ktor:ktor-client-cio:$version"
+        const val okhttp = "io.ktor:ktor-client-okhttp:$version"
+        const val okhttp_interceptor ="com.squareup.okhttp3:logging-interceptor:4.6.0"
         const val jackson = "io.ktor:ktor-client-jackson:$version"
         const val websockets = "io.ktor:ktor-client-websockets:$version"
     }

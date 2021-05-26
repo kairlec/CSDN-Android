@@ -22,7 +22,7 @@ class ChatAPI(val ssl: Boolean, val host: String, val port: Int? = null) : Seria
     }
 
     fun image(imageType: ImageType, id: String): String {
-        return "${baseUrl}/${imageType.method}/${id}"
+        return "${baseUrl}/img/${imageType.method}/${id}"
     }
 
     fun profilePhoto(): String {

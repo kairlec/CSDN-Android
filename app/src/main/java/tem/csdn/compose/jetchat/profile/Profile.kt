@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -50,6 +51,7 @@ import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.insets.statusBarsPadding
+import tem.csdn.compose.jetchat.conversation.CustomImage
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
 
@@ -188,15 +190,51 @@ private fun ProfileHeader(
     val offset = (scrollState.value / 2)
     val offsetDp = with(LocalDensity.current) { offset.toDp() }
 
-    Image(
-        modifier = Modifier
-            .heightIn(max = containerHeight / 2)
-            .fillMaxWidth()
-            .padding(top = offsetDp),
-        painter = data.getPhotoPainterOrDefault(chatServer),
-        contentScale = ContentScale.Crop,
-        contentDescription = null
-    )
+    data.getPhotoPainter(chatServer)?.let {
+        CustomImage(url = it,
+            error = {
+                Image(
+                    modifier = Modifier
+                        .heightIn(max = containerHeight / 2)
+                        .fillMaxWidth()
+                        .padding(top = offsetDp),
+                    painter = painterResource(id = R.drawable.ic_broken_cable),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null
+                )
+            },
+            loading = {
+                Image(
+                    modifier = Modifier
+                        .heightIn(max = containerHeight / 2)
+                        .fillMaxWidth()
+                        .padding(top = offsetDp),
+                    painter = painterResource(id = R.drawable.ic_loading),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null
+                )
+            }) {
+            Image(
+                modifier = Modifier
+                    .heightIn(max = containerHeight / 2)
+                    .fillMaxWidth()
+                    .padding(top = offsetDp),
+                painter = it,
+                contentScale = ContentScale.Crop,
+                contentDescription = null
+            )
+        }
+    } ?: run {
+        Image(
+            modifier = Modifier
+                .heightIn(max = containerHeight / 2)
+                .fillMaxWidth()
+                .padding(top = offsetDp),
+            painter = painterResource(id = R.drawable.ic_default_avatar_man),
+            contentScale = ContentScale.Crop,
+            contentDescription = null
+        )
+    }
 }
 
 @Composable

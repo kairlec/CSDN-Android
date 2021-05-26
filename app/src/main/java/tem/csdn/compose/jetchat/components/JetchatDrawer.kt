@@ -23,7 +23,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import tem.csdn.compose.jetchat.R
 import com.google.accompanist.insets.statusBarsHeight
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
-import tem.csdn.compose.jetchat.conversation.image
+import tem.csdn.compose.jetchat.conversation.CustomImage
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
 
@@ -55,12 +55,12 @@ fun ColumnScope.JetchatDrawer(
         chat.displayName
     }
     DrawerItemHeader(stringResource(id = R.string.chat_header))
-    ChatItem(channelName, true, chat.photo) {
+    ChatItem(channelName, true, chat.getPhotoPainter(chatServer = chatServer)) {
         onChatClicked()
     }
     DrawerItemHeader(stringResource(id = R.string.profile_header))
     profiles.forEach {
-        ProfileItem(text = it.displayName, profilePic = it.getPhotoPainterOrDefault(chatServer)) {
+        ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter(chatServer)) {
             onProfileClicked(it)
         }
     }
@@ -116,13 +116,41 @@ private fun ChatItem(
         } else {
             MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium)
         }
-        Icon(
-            painter = chatPhoto?.let { image(url = it) }
-                ?: painterResource(id = R.drawable.ic_jetchat),
-            tint = iconTint,
-            modifier = Modifier.padding(8.dp),
-            contentDescription = null
-        )
+        if (chatPhoto == null) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_jetchat),
+                tint = iconTint,
+                modifier = Modifier.padding(8.dp),
+                contentDescription = null
+            )
+        } else {
+            CustomImage(
+                url = chatPhoto,
+                loading = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_loading),
+                        tint = iconTint,
+                        modifier = Modifier.padding(8.dp),
+                        contentDescription = null
+                    )
+                },
+                error = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_broken_cable),
+                        tint = iconTint,
+                        modifier = Modifier.padding(8.dp),
+                        contentDescription = null
+                    )
+                }
+            ) {
+                Icon(
+                    painter = it,
+                    tint = iconTint,
+                    modifier = Modifier.padding(8.dp),
+                    contentDescription = null
+                )
+            }
+        }
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
             Text(
                 text,
@@ -135,7 +163,7 @@ private fun ChatItem(
 }
 
 @Composable
-private fun ProfileItem(text: String, profilePic: Painter?, onProfileClicked: () -> Unit) {
+private fun ProfileItem(text: String, profilePic: String?, onProfileClicked: () -> Unit) {
     Row(
         modifier = Modifier
             .height(48.dp)
@@ -150,14 +178,40 @@ private fun ProfileItem(text: String, profilePic: Painter?, onProfileClicked: ()
                 .padding(8.dp)
                 .size(24.dp)
             if (profilePic != null) {
+                CustomImage(
+                    url = profilePic,
+                    error = {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_broken_cable),
+                            modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
+                            contentScale = ContentScale.Crop,
+                            contentDescription = null
+                        )
+                    },
+                    loading = {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_loading),
+                            modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
+                            contentScale = ContentScale.Crop,
+                            contentDescription = null
+                        )
+                    }
+                ) {
+                    Image(
+                        painter = it,
+                        modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
+                        contentScale = ContentScale.Crop,
+                        contentDescription = null
+                    )
+                }
+            } else {
+//                Spacer(modifier = widthPaddingModifier)
                 Image(
-                    painter = profilePic,
+                    painter = painterResource(id = R.drawable.ic_default_avatar_man),
                     modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
                     contentScale = ContentScale.Crop,
                     contentDescription = null
                 )
-            } else {
-                Spacer(modifier = widthPaddingModifier)
             }
             Text(text, style = MaterialTheme.typography.body2, modifier = Modifier.padding(8.dp))
         }

@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -114,7 +115,7 @@ fun ConversationContent(
                 UserInput(
                     onMessageSent = { content ->
                         runBlocking {
-                            chatServer.inputChannel.send(
+                            chatServer.send(
                                 RawWebSocketFrameWrapper.ofText(
                                     content
                                 )
@@ -392,19 +393,69 @@ fun Message(
     Row(modifier = spaceBetweenAuthors) {
         if (isLastMessageByAuthor) {
             // Avatar
-            Image(
-                modifier = Modifier
-                    .clickable(onClick = { onAuthorClick(msg.author) })
-                    .padding(horizontal = 16.dp)
-                    .size(42.dp)
-                    .border(1.5.dp, borderColor, CircleShape)
-                    .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                    .clip(CircleShape)
-                    .align(Alignment.Top),
-                painter = msg.author.getPhotoPainterOrDefault(chatServer),
-                contentScale = ContentScale.Crop,
-                contentDescription = null,
-            )
+            msg.author.getPhotoPainter(chatServer)?.let {
+                CustomImage(
+                    url = it,
+                    error = {
+                        Image(
+                            modifier = Modifier
+                                .clickable(onClick = { onAuthorClick(msg.author) })
+                                .padding(horizontal = 16.dp)
+                                .size(42.dp)
+                                .border(1.5.dp, borderColor, CircleShape)
+                                .border(3.dp, MaterialTheme.colors.surface, CircleShape)
+                                .clip(CircleShape)
+                                .align(Alignment.Top),
+                            painter = painterResource(id = R.drawable.ic_broken_cable),
+                            contentScale = ContentScale.Crop,
+                            contentDescription = null,
+                        )
+                    },
+                    loading = {
+                        Image(
+                            modifier = Modifier
+                                .clickable(onClick = { onAuthorClick(msg.author) })
+                                .padding(horizontal = 16.dp)
+                                .size(42.dp)
+                                .border(1.5.dp, borderColor, CircleShape)
+                                .border(3.dp, MaterialTheme.colors.surface, CircleShape)
+                                .clip(CircleShape)
+                                .align(Alignment.Top),
+                            painter = painterResource(id = R.drawable.ic_loading),
+                            contentScale = ContentScale.Crop,
+                            contentDescription = null,
+                        )
+                    }
+                ) {
+                    Image(
+                        modifier = Modifier
+                            .clickable(onClick = { onAuthorClick(msg.author) })
+                            .padding(horizontal = 16.dp)
+                            .size(42.dp)
+                            .border(1.5.dp, borderColor, CircleShape)
+                            .border(3.dp, MaterialTheme.colors.surface, CircleShape)
+                            .clip(CircleShape)
+                            .align(Alignment.Top),
+                        painter = it,
+                        contentScale = ContentScale.Crop,
+                        contentDescription = null,
+                    )
+                }
+            } ?: run {
+                Image(
+                    modifier = Modifier
+                        .clickable(onClick = { onAuthorClick(msg.author) })
+                        .padding(horizontal = 16.dp)
+                        .size(42.dp)
+                        .border(1.5.dp, borderColor, CircleShape)
+                        .border(3.dp, MaterialTheme.colors.surface, CircleShape)
+                        .clip(CircleShape)
+                        .align(Alignment.Top),
+                    painter = painterResource(id = R.drawable.ic_default_avatar_man),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null,
+                )
+            }
         } else {
             // Space under avatar
             Spacer(modifier = Modifier.width(74.dp))
@@ -539,12 +590,31 @@ fun ChatItemBubble(
         message.getImagePainter(chatServer)?.let {
             Spacer(modifier = Modifier.height(4.dp))
             Surface(color = backgroundBubbleColor, shape = bubbleShape) {
-                Image(
-                    painter = it,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(160.dp),
-                    contentDescription = stringResource(id = R.string.attached_image)
-                )
+                CustomImage(url = it,
+                    loading = {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_loading),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(160.dp),
+                            contentDescription = stringResource(id = R.string.attached_image)
+                        )
+                    },
+                    error = {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_broken_cable),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(160.dp),
+                            contentDescription = stringResource(id = R.string.attached_image)
+                        )
+                    }
+                ) {
+                    Image(
+                        painter = it,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(160.dp),
+                        contentDescription = stringResource(id = R.string.attached_image)
+                    )
+                }
             }
         }
     }

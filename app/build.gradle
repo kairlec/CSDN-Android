@@ -76,10 +76,14 @@ android {
 }
 
 dependencies {
+    implementation Libs.disklrucache
+
     implementation Libs.Ktor.serialization
     implementation Libs.Ktor.android
     implementation Libs.Ktor.logging
     implementation Libs.Ktor.cio
+    //implementation Libs.Ktor.okhttp
+    //implementation Libs.Ktor.okhttp_interceptor
     implementation Libs.Ktor.websockets
     implementation Libs.Ktor.jackson
 
@@ -110,7 +114,8 @@ dependencies {
     implementation Libs.AndroidX.Compose.viewBinding
 
     implementation Libs.Accompanist.insets
-    implementation Libs.Accompanist.glide
+    //implementation Libs.Accompanist.glide
+    //implementation Libs.Accompanist.glide_okhttp3
 
     implementation Libs.AndroidX.Room.runtime
     implementation Libs.AndroidX.Room.ktx

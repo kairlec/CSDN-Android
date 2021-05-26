@@ -6,8 +6,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.room.*
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatAPI
-import tem.csdn.compose.jetchat.conversation.avatarImage
-import tem.csdn.compose.jetchat.conversation.image
 import tem.csdn.compose.jetchat.data.ChatServer
 import java.io.Serializable
 
@@ -21,22 +19,15 @@ data class Message(
     fun toLocal(): LocalMessage = LocalMessage(id, content, timestamp, image, author.displayId)
 
     @Composable
-    fun getImagePainter(chatServer: ChatServer): Painter? {
+    fun getImagePainter(chatServer: ChatServer): String? {
         return if (image == true) {
-            image(
-                url = chatServer.chatAPI.image(
-                    ChatAPI.ImageType.IMAGE,
-                    id.toString()
-                )
+            chatServer.chatAPI.image(
+                ChatAPI.ImageType.IMAGE,
+                id.toString()
             )
         } else {
             null
         }
-    }
-
-    @Composable
-    fun getImagePainterOrDefault(chatServer: ChatServer): Painter {
-        return getImagePainter(chatServer) ?: painterResource(id = R.drawable.ic_broken_cable)
     }
 }
 
@@ -56,17 +47,12 @@ data class User(
     }
 
     @Composable
-    fun getPhotoPainter(chatServer: ChatServer): Painter? {
+    fun getPhotoPainter(chatServer: ChatServer): String? {
         return if (photo == true) {
-            avatarImage(url = chatServer.chatAPI.image(ChatAPI.ImageType.PHOTO, displayId))
+            chatServer.chatAPI.image(ChatAPI.ImageType.PHOTO, displayId)
         } else {
             null
         }
-    }
-
-    @Composable
-    fun getPhotoPainterOrDefault(chatServer: ChatServer): Painter {
-        return getPhotoPainter(chatServer) ?: painterResource(id = R.drawable.ic_default_avatar_man)
     }
 
     override fun compareTo(other: User): Int {

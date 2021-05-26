@@ -5,13 +5,18 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.*
 import io.ktor.client.features.websocket.*
 import io.ktor.client.request.*
+import io.ktor.http.cio.websocket.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.sync.Mutex
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.dao.MessageDao
 import tem.csdn.compose.jetchat.dao.UserDao
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.ReservableSendChannel
 import tem.csdn.compose.jetchat.util.connectWebSocketToServer
+import tem.csdn.compose.jetchat.util.trySend
 import java.lang.Exception
 
 class ChatServerInitException(
@@ -27,10 +32,19 @@ class ChatServer(
     private val lastMessageId: Long?,
     val messageDao: MessageDao,
     val userDao: UserDao,
+    val coroutineScope: CoroutineScope,
     val onWebSocketEvent: suspend (Boolean) -> Unit
 ) {
     val objectMapper = jacksonObjectMapper()
-    val inputChannel = Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED)
+
+    // 这个锁用来保持WebSocket不会被关闭,防止提前关闭输出导致需要重新连接
+    private val webSocketKeepAliveMutex = Mutex()
+    private val inputReservableSendChannel = ReservableSendChannel<RawWebSocketFrameWrapper<*>>(
+        coroutineScope = coroutineScope,
+        context = Dispatchers.IO,
+        capacity = Channel.UNLIMITED,
+        start = CoroutineStart.LAZY
+    )
     val outputChannel = Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED)
 
     suspend fun getMeProfile(): User {
@@ -71,24 +85,53 @@ class ChatServer(
         onConnect: suspend DefaultClientWebSocketSession.() -> Unit,
         onDisconnect: suspend () -> Unit
     ) {
+        if (webSocketKeepAliveMutex.isLocked) {
+            webSocketKeepAliveMutex.unlock()
+        }
         connectWebSocketToServer(
             ssl = chatAPI.ssl,
             host = chatAPI.host,
             port = chatAPI.port,
             path = chatAPI.webSocket(id),
             objectMapper = objectMapper,
-            inputMessageChannel = inputChannel,
+            webSocketKeepAliveMutex = webSocketKeepAliveMutex,
             outputMessageChannel = outputChannel,
-            onConnected = {
+            onConnected = { wsSession ->
+                Log.d(
+                    "CSDN_DEBUG",
+                    "locked to keep alive, redirect to send handler and send error handler"
+                )
+                if (!webSocketKeepAliveMutex.isLocked) {
+                    webSocketKeepAliveMutex.lock()
+                }
+                inputReservableSendChannel.invokeOnReceive {
+                    wsSession.trySend(objectMapper, it) { throwable ->
+                        throw throwable
+                    }
+                }
+                inputReservableSendChannel.invokeOnReceiveError {
+                    if (webSocketKeepAliveMutex.isLocked) {
+                        webSocketKeepAliveMutex.unlock()
+                    }
+                    wsSession.close()
+                }
+                Log.d("CSDN_DEBUG", "start input listen")
+                inputReservableSendChannel.startAll()
                 onWebSocketEvent(true)
-                onConnect(it)
+                onConnect(wsSession)
             },
             onDisconnected = {
+                Log.d("CSDN_DEBUG", "disconnect,pause receive Handelr")
+                inputReservableSendChannel.pauseReceiveHandler()
                 onWebSocketEvent(false)
                 onDisconnect()
             }
         )
         Log.d("CSDN_DEBUG", "init for websocket")
+    }
+
+    suspend fun send(rawWebSocketFrameWrapper: RawWebSocketFrameWrapper<*>) {
+        inputReservableSendChannel.send(rawWebSocketFrameWrapper)
     }
 
 }

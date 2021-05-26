@@ -13,9 +13,11 @@ import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tem.csdn.compose.jetchat.data.*
 import java.lang.Exception
-
+import java.lang.IllegalStateException
 
 val client = HttpClient(CIO) {
     install(WebSockets) {
@@ -27,6 +29,8 @@ val client = HttpClient(CIO) {
     }
 }
 
+fun currentHttpClient() = client
+
 suspend fun connectWebSocketToServer(
     ssl: Boolean,
     host: String = "localhost",
@@ -34,7 +38,7 @@ suspend fun connectWebSocketToServer(
     path: String = "/",
     method: HttpMethod = HttpMethod.Get,
     objectMapper: ObjectMapper,
-    inputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>,
+    webSocketKeepAliveMutex: Mutex,
     outputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>,
     onConnected: suspend (DefaultClientWebSocketSession) -> Unit,
     onDisconnected: suspend () -> Unit,
@@ -56,14 +60,9 @@ suspend fun connectWebSocketToServer(
             try {
                 val messageOutputRoutine =
                     launch { outputMessages(objectMapper, outputMessageChannel) }
-                val userInputRoutine = launch {
-                    inputMessages(objectMapper, inputMessageChannel) {
-                        this@webSocket.close(CloseReason(CloseReason.Codes.NORMAL, "send error"))
-                    }
-                }
-                Log.d("CSDN_DEBUG", "wait to input routine")
-                userInputRoutine.join()
-                Log.d("CSDN_DEBUG", "input pause, ready to cancel output")
+                Log.d("CSDN_DEBUG", "ready to lock to keep alive")
+                webSocketKeepAliveMutex.withLock {}
+                Log.d("CSDN_DEBUG", "unlock and ready to cancel output")
                 messageOutputRoutine.cancel()
                 Log.d("CSDN_DEBUG", "cancel output")
             } finally {
@@ -108,70 +107,62 @@ suspend fun DefaultClientWebSocketSession.outputMessages(
     }
 }
 
-suspend fun DefaultClientWebSocketSession.inputMessages(
+suspend fun DefaultClientWebSocketSession.trySend(
     objectMapper: ObjectMapper,
-    inputMessageChannel: Channel<RawWebSocketFrameWrapper<*>>,
-    onSendFailed: suspend () -> Unit,
-) {
-    for (rawWebSocketFrameWrapper in inputMessageChannel) {
-        var needClose = false
-        rawWebSocketFrameWrapper.ifRawText {
-            if (!sendRetry(
-                    Frame.Text(
-                        objectMapper.writeValueAsString(
-                            TextWebSocketFrameWrapper.ofMessage(
-                                it
-                            )
-                        )
+    rawWebSocketFrameWrapper: RawWebSocketFrameWrapper<*>,
+    onSendFailed: suspend (Throwable) -> Unit
+): Boolean {
+    var error: Throwable? = null
+    rawWebSocketFrameWrapper.ifRawText {
+        error = sendRetry(
+            Frame.Text(
+                objectMapper.writeValueAsString(
+                    TextWebSocketFrameWrapper.ofMessage(
+                        it
                     )
                 )
-            ) {
-                Log.e("CSDN_WEBSOCKET_SEND", "send error")
-                needClose = true
-                onSendFailed()
-            }
-        }
-        rawWebSocketFrameWrapper.ifTextWrapper(objectMapper) {
-            if (!sendRetry(
-                    Frame.Text(
-                        objectMapper.writeValueAsString(it)
-                    )
-                )
-            ) {
-                Log.e("CSDN_WEBSOCKET_SEND", "send error")
-                needClose = true
-                onSendFailed()
-            }
-        }
-        rawWebSocketFrameWrapper.ifBinary(objectMapper) {
-            if (!sendRetry(Frame.Binary(false, it))) {
-                Log.e("CSDN_WEBSOCKET_SEND", "send error")
-                needClose = true
-                onSendFailed()
-            }
-        }
-        if (needClose) {
-            Log.d("CSDN_DEBUG", "send failed and receive channel need to pause")
-            break
-        }
+            )
+        )
+    }
+    rawWebSocketFrameWrapper.ifTextWrapper(objectMapper) {
+        error = sendRetry(
+            Frame.Text(
+                objectMapper.writeValueAsString(it)
+            )
+        )
+    }
+    rawWebSocketFrameWrapper.ifBinary(objectMapper) {
+        error = sendRetry(Frame.Binary(false, it))
+    }
+    return if (error != null) {
+        Log.e("CSDN_WEBSOCKET_SEND", "send error")
+        onSendFailed(error!!)
+        false
+    } else {
+        true
     }
 }
 
-suspend fun DefaultClientWebSocketSession.sendRetry(frame: Frame, retryCnt: Int = 3): Boolean {
-    if (retryCnt == 0) {
-        return false
+suspend fun DefaultClientWebSocketSession.sendRetry(frame: Frame, retryCnt: Int = 3): Throwable? {
+    if (retryCnt <= 0) {
+        return IllegalStateException("Parameter retryCnt must be greater than 0")
     }
     return try {
         send(frame)
-        true
+        Log.d("CSDN_WEBSOCKET_SEND_RETRY", "sended:${frame}")
+        null
     } catch (e: ClosedSendChannelException) {
-        false
+        e
     } catch (e: Throwable) {
         Log.e(
             "CSDN_WEBSOCKET_SEND_RETRY",
             "send error when retry(${retryCnt}): ${e.localizedMessage}",
             e
         )
-        sendRetry(frame, retryCnt - 1)
+        if (retryCnt == 1) {
+            e
+        } else {
+            sendRetry(frame, retryCnt - 1)
+        }
     }
 }
