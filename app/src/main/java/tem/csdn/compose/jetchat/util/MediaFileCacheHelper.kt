@@ -67,24 +67,26 @@ class MediaFileCacheHelper {
         val cacheSize = maxMemory / 8
         memoryCache = object : LruCache<String, Bitmap>(cacheSize) {
             override fun sizeOf(key: String, bitmap: Bitmap): Int {
-                return bitmap.byteCount / 1024
+                return bitmap.byteCount / 8
             }
         }
     }
 
-    suspend fun loadBitmap(imageKey: String, ifNotExist: suspend () -> InputStream): Bitmap {
+
+    suspend fun loadCache(imageKey: String, ifNotExist: suspend () -> InputStream): Bitmap {
         return withContext(Dispatchers.IO) {
             val key = hashKey(imageKey)
-            memoryCache.get(key) ?: diskLruCache.get(key)?.getInputStream(0)
-                ?.let { BitmapFactory.decodeStream(it) }?.apply {
-                    addBitmapToCache(key, this)
-                    Log.d("CSDN_LRU", "[${imageKey}]load image:${this}")
-                } ?: run {
+            getBitmapFromCache(key) ?: diskLruCache.get(key)?.getInputStream(0)?.let {
+                BitmapFactory.decodeStream(it)
+            }?.apply {
+                addBitmapToCache(key, this)
+//                Log.d("CSDN_LRU", "[${imageKey}]load image:${this}")
+            } ?: run {
                 val bytes = ifNotExist().readBytes()
                 writeToDiskLruCache(key, bytes.inputStream())
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size).apply {
-                    addBitmapToCache(key, this)
-                }
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                addBitmapToCache(key, bitmap)
+                bitmap
             }
         }
     }
@@ -104,8 +106,17 @@ class MediaFileCacheHelper {
         diskLruCache.flush()
     }
 
+    private fun getBitmapFromCache(key: String): Bitmap? {
+        return memoryCache.get(key)/*.apply {
+            if (this == null) {
+                Log.d("CSDN_DEBUG", "null->${key}")
+            }
+        }*/
+    }
+
     private fun addBitmapToCache(key: String, bitmap: Bitmap) {
         if (memoryCache.get(key) == null) {
+//            Log.d("CSDN_DEBUG", "add->${key}")
             memoryCache.put(key, bitmap)
         }
     }

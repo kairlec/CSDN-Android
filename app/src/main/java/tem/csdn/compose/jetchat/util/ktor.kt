@@ -132,7 +132,7 @@ suspend fun DefaultClientWebSocketSession.trySend(
         )
     }
     rawWebSocketFrameWrapper.ifBinary(objectMapper) {
-        error = sendRetry(Frame.Binary(false, it))
+        error = sendRetry(Frame.Binary(true, it))
     }
     return if (error != null) {
         Log.e("CSDN_WEBSOCKET_SEND", "send error")

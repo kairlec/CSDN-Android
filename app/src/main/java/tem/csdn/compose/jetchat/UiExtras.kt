@@ -12,13 +12,13 @@ fun FunctionalityNotAvailablePopup(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         text = {
             Text(
-                text = "Functionality not available \uD83D\uDE48",
+                text = "功能尚未完成 \uD83D\uDE48",
                 style = MaterialTheme.typography.body2
             )
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "CLOSE")
+                Text(text = "关闭")
             }
         }
     )

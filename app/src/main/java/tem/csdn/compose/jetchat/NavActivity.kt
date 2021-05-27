@@ -2,7 +2,6 @@ package tem.csdn.compose.jetchat
 
 import android.os.Bundle
 import android.util.Log
-import android.view.View.inflate
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -28,7 +27,6 @@ import tem.csdn.compose.jetchat.databinding.ContentMainBinding
 import com.google.accompanist.insets.ProvideWindowInsets
 import kotlinx.coroutines.*
 import tem.csdn.compose.jetchat.chat.ChatViewModel
-import tem.csdn.compose.jetchat.data.ChatServer
 
 
 /**
@@ -49,6 +47,7 @@ class NavActivity : AppCompatActivity() {
             val context = LocalContext.current
             chatViewModel.initIfNeed(context)
             val chatData by chatViewModel.chatData.observeAsState()
+            val meProfile by chatViewModel.meProfile.observeAsState()
             val progress by chatViewModel.initProgress.observeAsState(initial = 0f)
             val progressTextId by
             chatViewModel.initProgressTextId.observeAsState(initial = R.string.init_app)
@@ -120,7 +119,8 @@ class NavActivity : AppCompatActivity() {
                             chat = chatData!!,
                             profiles = profiles.values,
                             chatServer = chatServer!!,
-                            chatServerOffline = !chatServerOnline
+                            chatServerOffline = !chatServerOnline,
+                            meProfile = meProfile!!
                         ) {
                             AndroidViewBinding(ContentMainBinding::inflate)
                         }

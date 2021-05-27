@@ -51,7 +51,7 @@ import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.insets.statusBarsPadding
-import tem.csdn.compose.jetchat.conversation.CustomImage
+import tem.csdn.compose.jetchat.conversation.LoadImage
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
 
@@ -191,7 +191,7 @@ private fun ProfileHeader(
     val offsetDp = with(LocalDensity.current) { offset.toDp() }
 
     data.getPhotoPainter(chatServer)?.let {
-        CustomImage(url = it,
+        LoadImage(url = it,
             error = {
                 Image(
                     modifier = Modifier

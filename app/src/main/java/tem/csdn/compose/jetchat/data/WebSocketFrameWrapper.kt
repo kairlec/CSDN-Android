@@ -61,7 +61,7 @@ suspend fun RawWebSocketFrameWrapper<*>.ifBinary(
     event: suspend (ByteArray) -> Unit
 ) {
     if (type == RawWebSocketFrameWrapper.RawFrameType.BINARY) {
-        event(objectMapper.convertValue(binaryContent))
+        event(binaryContent)
     }
 }
 

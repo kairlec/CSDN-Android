@@ -1,6 +1,7 @@
 package tem.csdn.compose.jetchat.data
 
 import android.util.Log
+import androidx.compose.runtime.Composable
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.*
 import io.ktor.client.features.websocket.*
@@ -35,6 +36,13 @@ class ChatServer(
     val coroutineScope: CoroutineScope,
     val onWebSocketEvent: suspend (Boolean) -> Unit
 ) {
+    companion object {
+        lateinit var current: ChatServer
+            private set
+            @get:Composable
+            get
+    }
+
     val objectMapper = jacksonObjectMapper()
 
     // 这个锁用来保持WebSocket不会被关闭,防止提前关闭输出导致需要重新连接
@@ -134,6 +142,10 @@ class ChatServer(
         inputReservableSendChannel.send(rawWebSocketFrameWrapper)
     }
 
+
+    init {
+        current = this
+    }
 }
 
 class Result<T>(

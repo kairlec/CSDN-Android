@@ -44,4 +44,8 @@
     <string name="init_app">Application initialization</string>
     <string name="handle_server_data">Processing data</string>
     <string name="offline">offline</string>
+    <string name="file_not_found">File not found</string>
+    <string name="image_upload_failed">Send image failed</string>
+    <string name="retry">Retry</string>
+    <string name="ok">OK</string>
 </resources>

@@ -13,6 +13,13 @@ object Libs {
     const val material = "com.google.android.material:material:1.3.0"
     const val disklrucache = "com.jakewharton:disklrucache:2.0.2"
 
+    const val tiny = "com.zxy.android:tiny:1.1.0"
+
+    object Landscapist{
+        private const val version = "1.2.2"
+        const val fresco = "com.github.skydoves:landscapist-fresco:$version"
+    }
+
     object Accompanist {
         private const val version = "0.10.0"
         const val insets = "com.google.accompanist:accompanist-insets:$version"

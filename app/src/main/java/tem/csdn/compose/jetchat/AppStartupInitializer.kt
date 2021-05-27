@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.viewModels
 import androidx.room.Room
 import androidx.startup.Initializer
+import com.zxy.tiny.Tiny
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel

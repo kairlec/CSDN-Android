@@ -1,11 +1,11 @@
 package tem.csdn.compose.jetchat.conversation
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
@@ -18,7 +18,7 @@ import tem.csdn.compose.jetchat.util.currentHttpClient
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
-fun CustomImage(
+fun LoadImage(
     url: String,
     error: @Composable (Throwable?) -> Unit = {},
     loading: @Composable () -> Unit = {},
@@ -27,10 +27,10 @@ fun CustomImage(
     val status = remember { mutableStateOf<Any?>(null) }
     MainScope().launch(Dispatchers.IO) {
         val result = try {
-            MediaFileCacheHelper.current.loadBitmap(url) {
+            MediaFileCacheHelper.current.loadCache(url) {
                 val response = currentHttpClient().get<HttpResponse>(url)
                 response.receive()
-            }.asImageBitmap()
+            }
         } catch (e: Throwable) {
             e
         }
@@ -47,11 +47,12 @@ fun CustomImage(
             )
             error(status.value as Throwable)
         }
-        is ImageBitmap -> {
-            ok(BitmapPainter(status.value as ImageBitmap))
+        is Bitmap -> {
+            ok(BitmapPainter((status.value as Bitmap).asImageBitmap()))
         }
-        is Painter ->
+        is Painter -> {
             ok(status.value as Painter)
+        }
         null ->
             loading()
         else ->

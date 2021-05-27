@@ -23,7 +23,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -31,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import tem.csdn.compose.jetchat.R
 import com.google.accompanist.insets.statusBarsHeight
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
-import tem.csdn.compose.jetchat.conversation.CustomImage
+import tem.csdn.compose.jetchat.conversation.LoadImage
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
 
@@ -42,7 +41,8 @@ fun ColumnScope.JetchatDrawer(
     chat: ChatDataScreenState,
     chatServer: ChatServer,
     chatServerOffline: Boolean,
-    profiles: Iterable<User>
+    profiles: Iterable<User>,
+    meProfile: User,
 ) {
     // Use statusBarsHeight() to add a spacer which pushes the drawer content
     // below the status bar (y-axis)
@@ -59,9 +59,17 @@ fun ColumnScope.JetchatDrawer(
         onChatClicked()
     }
     DrawerItemHeader(stringResource(id = R.string.profile_header))
+    ProfileItem(
+        text = "${meProfile.displayName}(${stringResource(id = R.string.author_me)})",
+        profilePic = meProfile.getPhotoPainter(chatServer)
+    ) {
+        onProfileClicked(meProfile)
+    }
     profiles.forEach {
-        ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter(chatServer)) {
-            onProfileClicked(it)
+        if (it.displayId != meProfile.displayId) {
+            ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter(chatServer)) {
+                onProfileClicked(it)
+            }
         }
     }
 }
@@ -124,7 +132,7 @@ private fun ChatItem(
                 contentDescription = null
             )
         } else {
-            CustomImage(
+            LoadImage(
                 url = chatPhoto,
                 loading = {
                     Icon(
@@ -178,7 +186,7 @@ private fun ProfileItem(text: String, profilePic: String?, onProfileClicked: () 
                 .padding(8.dp)
                 .size(24.dp)
             if (profilePic != null) {
-                CustomImage(
+                LoadImage(
                     url = profilePic,
                     error = {
                         Image(

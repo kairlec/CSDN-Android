@@ -5,17 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.paddingFrom
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -45,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.platform.LocalContext
@@ -95,6 +86,8 @@ fun ConversationContent(
     modifier: Modifier = Modifier,
     chatServer: ChatServer,
     meProfile: User,
+    painterClicked: (Painter) -> Unit,
+    onImageSelect: () -> Unit,
     onNavIconPressed: () -> Unit = { }
 ) {
     val scrollState = rememberLazyListState()
@@ -110,7 +103,8 @@ fun ConversationContent(
                     scrollState = scrollState,
                     chatServer = chatServer,
                     getProfile = getProfile,
-                    meProfile = meProfile
+                    meProfile = meProfile,
+                    painterClicked = painterClicked
                 )
                 UserInput(
                     onMessageSent = { content ->
@@ -122,6 +116,7 @@ fun ConversationContent(
                             )
                         }
                     },
+                    onImageSelect = onImageSelect,
                     resetScroll = {
                         scope.launch {
                             scrollState.scrollToItem(0)
@@ -216,6 +211,7 @@ fun Messages(
     scrollState: LazyListState,
     modifier: Modifier = Modifier,
     getProfile: (String) -> User?,
+    painterClicked: (Painter) -> Unit,
     chatServer: ChatServer,
     meProfile: User
 ) {
@@ -226,7 +222,6 @@ fun Messages(
     val scope = rememberCoroutineScope()
 
     Box(modifier = modifier) {
-
         LazyColumn(
             reverseLayout = true,
             state = scrollState,
@@ -262,7 +257,6 @@ fun Messages(
                     item {
                         when {
                             msgTime.isAfter(today) -> {
-
                                 DayHeader(dayString = stringResource(id = R.string.today))
                             }
                             msgTime.isAfter(yesterday) -> {
@@ -317,7 +311,8 @@ fun Messages(
                         isLastMessageByAuthor = isLastMessageByAuthor,
                         msgTimeString = msgTimeString,
                         chatServer = chatServer,
-                        getProfile = getProfile
+                        getProfile = getProfile,
+                        painterClicked = painterClicked
                     )
                 }
                 if (nextMessage == null) {
@@ -375,6 +370,7 @@ fun Messages(
 @Composable
 fun Message(
     onAuthorClick: (User) -> Unit,
+    painterClicked: (Painter) -> Unit,
     getProfile: (String) -> User?,
     msg: Message,
     isUserMe: Boolean,
@@ -390,11 +386,13 @@ fun Message(
     }
 
     val spaceBetweenAuthors = if (isLastMessageByAuthor) Modifier.padding(top = 8.dp) else Modifier
-    Row(modifier = spaceBetweenAuthors) {
+
+    @Composable
+    fun RowScope.Photo() {
         if (isLastMessageByAuthor) {
             // Avatar
             msg.author.getPhotoPainter(chatServer)?.let {
-                CustomImage(
+                LoadImage(
                     url = it,
                     error = {
                         Image(
@@ -460,8 +458,13 @@ fun Message(
             // Space under avatar
             Spacer(modifier = Modifier.width(74.dp))
         }
+    }
+
+    @Composable
+    fun RowScope.AuthorAndTextMessage() {
         AuthorAndTextMessage(
             msg = msg,
+            isUserMe = isUserMe,
             chatServer = chatServer,
             isFirstMessageByAuthor = isFirstMessageByAuthor,
             isLastMessageByAuthor = isLastMessageByAuthor,
@@ -469,33 +472,49 @@ fun Message(
             getProfile = getProfile,
             modifier = Modifier
                 .padding(end = 16.dp)
+                .wrapContentWidth(Alignment.End)
                 .weight(1f),
-            msgTimeString = msgTimeString
+            msgTimeString = msgTimeString,
+            painterClicked = painterClicked
         )
+    }
+
+    Row(modifier = spaceBetweenAuthors) {
+        if (isUserMe) {
+            AuthorAndTextMessage()
+            Photo()
+        } else {
+            Photo()
+            AuthorAndTextMessage()
+        }
     }
 }
 
 @Composable
 fun AuthorAndTextMessage(
     msg: Message,
+    isUserMe: Boolean,
     chatServer: ChatServer,
     isFirstMessageByAuthor: Boolean,
     isLastMessageByAuthor: Boolean,
     authorClicked: (User) -> Unit,
+    painterClicked: (Painter) -> Unit,
     getProfile: (String) -> User?,
     modifier: Modifier = Modifier,
     msgTimeString: String
 ) {
     Column(modifier = modifier) {
         if (isLastMessageByAuthor) {
-            AuthorNameTimestamp(msg, msgTimeString)
+            AuthorNameTimestamp(msg, isUserMe, msgTimeString)
         }
         ChatItemBubble(
             msg,
             chatServer,
             isFirstMessageByAuthor,
             authorClicked = authorClicked,
-            getProfile = getProfile
+            getProfile = getProfile,
+            painterClicked = painterClicked,
+            isUserMe = isUserMe
         )
         if (isFirstMessageByAuthor) {
             // Last bubble before next author
@@ -508,17 +527,10 @@ fun AuthorAndTextMessage(
 }
 
 @Composable
-private fun AuthorNameTimestamp(msg: Message, msgTimeString: String) {
+private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: String) {
     // Combine author and timestamp for a11y.
-    Row(modifier = Modifier.semantics(mergeDescendants = true) {}) {
-        Text(
-            text = msg.author.displayName,
-            style = MaterialTheme.typography.subtitle1,
-            modifier = Modifier
-                .alignBy(LastBaseline)
-                .paddingFrom(LastBaseline, after = 8.dp) // Space to 1st bubble
-        )
-        Spacer(modifier = Modifier.width(8.dp))
+    @Composable
+    fun RowScope.TimeString() {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
             Text(
                 text = msgTimeString,
@@ -527,9 +539,39 @@ private fun AuthorNameTimestamp(msg: Message, msgTimeString: String) {
             )
         }
     }
+
+    @Composable
+    fun RowScope.TextContent() {
+        Text(
+            text = "${msg.author.displayName}(${stringResource(id = R.string.author_me)})",
+            style = MaterialTheme.typography.subtitle1,
+            modifier = Modifier
+                .alignBy(LastBaseline)
+                .paddingFrom(LastBaseline, after = 8.dp) // Space to 1st bubble
+        )
+    }
+    if (isUserMe) {
+        Row(
+            modifier = Modifier.semantics(mergeDescendants = true) {}
+        ) {
+            TimeString()
+            Spacer(modifier = Modifier.width(8.dp))
+            TextContent()
+        }
+    } else {
+        Row(
+            modifier = Modifier.semantics(mergeDescendants = true) {}
+        ) {
+            TextContent()
+            Spacer(modifier = Modifier.width(8.dp))
+            TimeString()
+        }
+    }
 }
 
 private val ChatBubbleShape = RoundedCornerShape(0.dp, 8.dp, 8.dp, 0.dp)
+private val MeChatBubbleShape = RoundedCornerShape(8.dp, 0.dp, 0.dp, 8.dp)
+private val MeLastChatBubbleShape = RoundedCornerShape(8.dp, 0.dp, 8.dp, 8.dp)
 private val LastChatBubbleShape = RoundedCornerShape(0.dp, 8.dp, 8.dp, 8.dp)
 
 @Composable
@@ -567,7 +609,9 @@ fun ChatItemBubble(
     chatServer: ChatServer,
     lastMessageByAuthor: Boolean,
     getProfile: (String) -> User?,
-    authorClicked: (User) -> Unit
+    authorClicked: (User) -> Unit,
+    painterClicked: (Painter) -> Unit,
+    isUserMe: Boolean
 ) {
 
     val backgroundBubbleColor =
@@ -577,44 +621,76 @@ fun ChatItemBubble(
             MaterialTheme.colors.elevatedSurface(2.dp)
         }
 
-    val bubbleShape = if (lastMessageByAuthor) LastChatBubbleShape else ChatBubbleShape
-    Column {
-        Surface(color = backgroundBubbleColor, shape = bubbleShape) {
-            ClickableMessage(
-                message = message,
-                getProfile = getProfile,
-                authorClicked = authorClicked
-            )
+    val bubbleShape = if (lastMessageByAuthor) {
+        if (isUserMe) {
+            MeLastChatBubbleShape
+        } else {
+            LastChatBubbleShape
         }
-
-        message.getImagePainter(chatServer)?.let {
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(color = backgroundBubbleColor, shape = bubbleShape) {
-                CustomImage(url = it,
-                    loading = {
+    } else {
+        if (isUserMe) {
+            MeChatBubbleShape
+        } else {
+            ChatBubbleShape
+        }
+    }
+    val modifier = if (isUserMe) {
+        Modifier.wrapContentWidth(Alignment.End)
+    } else {
+        Modifier
+    }
+    Column(
+        modifier = modifier
+    ) {
+        if (message.image == true) {
+            message.getImagePainter(chatServer)?.let {
+                Spacer(modifier = Modifier.height(4.dp))
+                Surface(
+                    color = backgroundBubbleColor,
+                    shape = bubbleShape
+                ) {
+                    LoadImage(url = it,
+                        loading = {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_loading),
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(160.dp),
+                                contentDescription = stringResource(id = R.string.attached_image)
+                            )
+                        },
+                        error = {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_broken_cable),
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(160.dp),
+                                contentDescription = stringResource(id = R.string.attached_image)
+                            )
+                        }
+                    ) {
                         Image(
-                            painter = painterResource(id = R.drawable.ic_loading),
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(160.dp),
-                            contentDescription = stringResource(id = R.string.attached_image)
-                        )
-                    },
-                    error = {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_broken_cable),
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(160.dp),
+                            painter = it,
+//                        contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .widthIn(min = 160.dp, max = 240.dp)
+                                .clickable {
+                                    painterClicked(it)
+                                },
+                            contentScale = ContentScale.FillWidth,
                             contentDescription = stringResource(id = R.string.attached_image)
                         )
                     }
-                ) {
-                    Image(
-                        painter = it,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(160.dp),
-                        contentDescription = stringResource(id = R.string.attached_image)
-                    )
                 }
+            }
+        } else {
+            Surface(
+                color = backgroundBubbleColor,
+                shape = bubbleShape
+            ) {
+                ClickableMessage(
+                    message = message,
+                    getProfile = getProfile,
+                    authorClicked = authorClicked
+                )
             }
         }
     }
