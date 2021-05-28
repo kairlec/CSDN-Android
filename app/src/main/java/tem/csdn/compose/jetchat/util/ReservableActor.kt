@@ -2,26 +2,44 @@ package tem.csdn.compose.jetchat.util
 
 import android.util.Log
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ActorScope
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.selects.SelectClause2
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-fun <T> CoroutineScope.reservableSendChannel(
+data class ReceiveHandlerScope<E> internal constructor(
+    var hold: Boolean = false,
+    var cause: Throwable? = null,
+    var throwToErrorHandler: Boolean = true,
+    val next: suspend () -> E,
+    val scope: ActorScope<E>,
+    val channel: ReservableActor<E>
+)
+
+data class ReceiveErrorHandlerScope<E> internal constructor(
+    var hold: Boolean = true,
+    val cause: Throwable,
+    val next: suspend () -> E,
+    val scope: ActorScope<E>,
+    val channel: ReservableActor<E>
+)
+
+fun <T> CoroutineScope.reservableActor(
     context: CoroutineContext = EmptyCoroutineContext,
     start: CoroutineStart = CoroutineStart.DEFAULT,
     capacity: Int = 0,
     sendListener: (suspend () -> T)? = null,
-    onReceive: suspend ReservableSendChannel<T>.(T) -> Boolean,
-    onReceiveError: suspend Throwable.(T) -> Unit
-) = ReservableSendChannel<T>(this, context, start, capacity).apply {
+    onReceive: suspend ReceiveHandlerScope<T>.(T) -> Unit,
+    onReceiveError: suspend ReceiveErrorHandlerScope<T>.(T) -> Unit
+) = ReservableActor<T>(this, context, start, capacity).apply {
     this.sendListener(sendListener)
     this.invokeOnReceive(onReceive)
     this.invokeOnReceiveError(onReceiveError)
 }
 
-class ReservableSendChannel<T>(
+class ReservableActor<T>(
     private val coroutineScope: CoroutineScope,
     private val context: CoroutineContext = EmptyCoroutineContext,
     start: CoroutineStart = CoroutineStart.DEFAULT,
@@ -31,8 +49,8 @@ class ReservableSendChannel<T>(
     private val sendHandlerWaiter = SuspendWait(locked = start == CoroutineStart.LAZY)
 
     private var sendListenerHandler: (suspend () -> T)? = null
-    private var onReceiveHandler: (suspend ReservableSendChannel<T>.(T) -> Boolean) = { false }
-    private var onReceiveErrorHandler: (suspend Throwable.(T) -> Unit)? = null
+    private var onReceiveHandler: (suspend ReceiveHandlerScope<T>.(T) -> Unit) = {  }
+    private var onReceiveErrorHandler: (suspend ReceiveErrorHandlerScope<T>.(T) -> Unit)? = null
 
     private var listenJob = genJob(start)
 
@@ -60,7 +78,16 @@ class ReservableSendChannel<T>(
             try {
                 Log.d("CSDN_DEBUG_RSC", "receive:${element}")
                 receiveHandlerWaiter.listen {
-                    if (onReceiveHandler(element)) {
+                    val scope = ReceiveHandlerScope(
+                        next = ::receive,
+                        scope = this,
+                        channel = this@ReservableActor
+                    )
+                    onReceiveHandler(scope, element)
+                    if (scope.throwToErrorHandler && scope.cause != null) {
+                        throw scope.cause!!
+                    }
+                    if (!scope.hold) {
                         element = receive()
                         Log.d("CSDN_DEBUG_RSC", "receiveNEXT")
                     }
@@ -68,7 +95,17 @@ class ReservableSendChannel<T>(
             } catch (t: Throwable) {
                 Log.d("CSDN_DEBUG_RSC", "receiveError(${t.localizedMessage}):${element}")
                 try {
-                    onReceiveErrorHandler?.invoke(t, element)
+                    val scope = ReceiveErrorHandlerScope(
+                        next = ::receive,
+                        scope = this,
+                        channel = this@ReservableActor,
+                        cause = t
+                    )
+                    onReceiveErrorHandler?.invoke(scope, element)
+                    if (!scope.hold) {
+                        element = receive()
+                        Log.d("CSDN_DEBUG_RSC", "receiveNEXT(onError)")
+                    }
                 } catch (e: Throwable) {
                 }
             }
@@ -123,11 +160,11 @@ class ReservableSendChannel<T>(
     fun invokeOnReceiveResume(handler: (() -> Unit)?) =
         receiveHandlerWaiter.invokeOnResume(handler)
 
-    fun invokeOnReceive(handler: suspend ReservableSendChannel<T>.(T) -> Boolean = { false }) {
+    fun invokeOnReceive(handler: suspend ReceiveHandlerScope<T>.(T) -> Unit = {  }) {
         onReceiveHandler = handler
     }
 
-    fun invokeOnReceiveError(handler: (suspend Throwable.(T) -> Unit)? = null) {
+    fun invokeOnReceiveError(handler: (suspend ReceiveErrorHandlerScope<T>.(T) -> Unit)? = null) {
         onReceiveErrorHandler = handler
     }
 

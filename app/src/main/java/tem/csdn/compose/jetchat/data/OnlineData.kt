@@ -15,7 +15,7 @@ import tem.csdn.compose.jetchat.dao.MessageDao
 import tem.csdn.compose.jetchat.dao.UserDao
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
-import tem.csdn.compose.jetchat.util.ReservableSendChannel
+import tem.csdn.compose.jetchat.util.ReservableActor
 import tem.csdn.compose.jetchat.util.connectWebSocketToServer
 import tem.csdn.compose.jetchat.util.trySend
 import java.lang.Exception
@@ -47,7 +47,7 @@ class ChatServer(
 
     // 这个锁用来保持WebSocket不会被关闭,防止提前关闭输出导致需要重新连接
     private val webSocketKeepAliveMutex = Mutex()
-    private val inputReservableSendChannel = ReservableSendChannel<RawWebSocketFrameWrapper<*>>(
+    private val inputReservableActor = ReservableActor<RawWebSocketFrameWrapper<*>>(
         coroutineScope = coroutineScope,
         context = Dispatchers.IO,
         capacity = Channel.UNLIMITED,
@@ -112,25 +112,31 @@ class ChatServer(
                 if (!webSocketKeepAliveMutex.isLocked) {
                     webSocketKeepAliveMutex.lock()
                 }
-                inputReservableSendChannel.invokeOnReceive {
+                inputReservableActor.invokeOnReceive {
                     wsSession.trySend(objectMapper, it) { throwable ->
-                        throw throwable
+                        this.cause = throwable
+                        this.throwToErrorHandler = true
+                        it.ifTextWrapper(objectMapper) {
+                            if (it.type == TextWebSocketFrameWrapper.FrameType.HEARTBEAT || it.type == TextWebSocketFrameWrapper.FrameType.HEARTBEAT_ACK) {
+                                this.hold = false
+                            }
+                        }
                     }
                 }
-                inputReservableSendChannel.invokeOnReceiveError {
+                inputReservableActor.invokeOnReceiveError {
                     if (webSocketKeepAliveMutex.isLocked) {
                         webSocketKeepAliveMutex.unlock()
                     }
                     wsSession.close()
                 }
                 Log.d("CSDN_DEBUG", "start input listen")
-                inputReservableSendChannel.startAll()
+                inputReservableActor.startAll()
                 onWebSocketEvent(true)
                 onConnect(wsSession)
             },
             onDisconnected = {
                 Log.d("CSDN_DEBUG", "disconnect,pause receive Handelr")
-                inputReservableSendChannel.pauseReceiveHandler()
+                inputReservableActor.pauseReceiveHandler()
                 onWebSocketEvent(false)
                 onDisconnect()
             }
@@ -139,7 +145,7 @@ class ChatServer(
     }
 
     suspend fun send(rawWebSocketFrameWrapper: RawWebSocketFrameWrapper<*>) {
-        inputReservableSendChannel.send(rawWebSocketFrameWrapper)
+        inputReservableActor.send(rawWebSocketFrameWrapper)
     }
 
 

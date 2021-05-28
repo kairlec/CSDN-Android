@@ -461,7 +461,7 @@ fun Message(
     }
 
     @Composable
-    fun RowScope.AuthorAndTextMessage() {
+    fun AuthorAndTextMessage(modifier: Modifier) {
         AuthorAndTextMessage(
             msg = msg,
             isUserMe = isUserMe,
@@ -470,10 +470,7 @@ fun Message(
             isLastMessageByAuthor = isLastMessageByAuthor,
             authorClicked = onAuthorClick,
             getProfile = getProfile,
-            modifier = Modifier
-                .padding(end = 16.dp)
-                .wrapContentWidth(Alignment.End)
-                .weight(1f),
+            modifier = modifier,
             msgTimeString = msgTimeString,
             painterClicked = painterClicked
         )
@@ -481,11 +478,20 @@ fun Message(
 
     Row(modifier = spaceBetweenAuthors) {
         if (isUserMe) {
-            AuthorAndTextMessage()
+            AuthorAndTextMessage(
+                Modifier
+                    .padding(end = 16.dp)
+                    .wrapContentWidth(Alignment.End)
+                    .weight(1f)
+            )
             Photo()
         } else {
             Photo()
-            AuthorAndTextMessage()
+            AuthorAndTextMessage(
+                Modifier
+                    .padding(end = 16.dp)
+                    .weight(1f)
+            )
         }
     }
 }
@@ -541,9 +547,9 @@ private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: 
     }
 
     @Composable
-    fun RowScope.TextContent() {
+    fun RowScope.TextContent(text: String) {
         Text(
-            text = "${msg.author.displayName}(${stringResource(id = R.string.author_me)})",
+            text = text,
             style = MaterialTheme.typography.subtitle1,
             modifier = Modifier
                 .alignBy(LastBaseline)
@@ -556,13 +562,13 @@ private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: 
         ) {
             TimeString()
             Spacer(modifier = Modifier.width(8.dp))
-            TextContent()
+            TextContent("${msg.author.displayName}(${stringResource(id = R.string.author_me)})")
         }
     } else {
         Row(
             modifier = Modifier.semantics(mergeDescendants = true) {}
         ) {
-            TextContent()
+            TextContent(msg.author.displayName)
             Spacer(modifier = Modifier.width(8.dp))
             TimeString()
         }
@@ -613,7 +619,6 @@ fun ChatItemBubble(
     painterClicked: (Painter) -> Unit,
     isUserMe: Boolean
 ) {
-
     val backgroundBubbleColor =
         if (MaterialTheme.colors.isLight) {
             Color(0xFFF5F5F5)

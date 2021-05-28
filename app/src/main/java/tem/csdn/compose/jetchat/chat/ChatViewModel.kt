@@ -96,6 +96,7 @@ class ChatViewModel : ViewModel() {
         Log.i("CSDN_INIT", "app start up initializer start")
         MainScope().launch(Dispatchers.IO) {
             val uuid = UUIDHelper[context]
+            Log.d("CSDN_DEBUG","uuid=${uuid}")
             val mediaFileCacheHelper = MediaFileCacheHelper()
             mediaFileCacheHelper.initDiskLruCache(context, 1)
             val db = Room
