@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -17,6 +16,8 @@ import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.*
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.dao.AppDatabase
+import tem.csdn.compose.jetchat.dao.MessageDao
+import tem.csdn.compose.jetchat.dao.UserDao
 import tem.csdn.compose.jetchat.data.*
 import tem.csdn.compose.jetchat.model.HeartBeatException
 import tem.csdn.compose.jetchat.model.Message
@@ -39,6 +40,10 @@ class ChatViewModel : ViewModel() {
 
     private var inited = false
     private var reloading = false
+    lateinit var messageDao: MessageDao
+        private set
+    lateinit var userDao: UserDao
+        private set
 
     private suspend fun reload() {
         reloading = true
@@ -53,7 +58,7 @@ class ChatViewModel : ViewModel() {
                 withContext(Dispatchers.Main) {
                     withNewInitProgress(0.1f)
                 }
-                chatServer.value!!.messageDao.update(*newMessages.toTypedArray())
+                messageDao.update(*newMessages.toTypedArray())
                 withContext(Dispatchers.Main) {
                     withNewInitProgress(0.1f)
                 }
@@ -61,18 +66,18 @@ class ChatViewModel : ViewModel() {
                 withContext(Dispatchers.Main) {
                     withNewInitProgress(0.1f)
                 }
-                chatServer.value!!.userDao.update(*newProfiles.toTypedArray())
+                userDao.update(*newProfiles.toTypedArray())
                 withContext(Dispatchers.Main) {
                     withNewInitProgress(0.1f, R.string.handle_server_data)
                 }
                 val allUser =
-                    chatServer.value!!.userDao.getAll().map { it.displayId to it }.toTypedArray()
+                    userDao.getAll().map { it.displayId to it }.toTypedArray()
                 val allUserMap = mutableStateMapOf(*allUser)
                 withContext(Dispatchers.Main) {
                     this@ChatViewModel._allProfiles.value = allUserMap
                     withNewInitProgress(0.1f)
                 }
-                val allMessage = chatServer.value!!.messageDao.getAll().map {
+                val allMessage = messageDao.getAll().map {
                     Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
                     it.toNonLocal(allUserMap)
                 }
@@ -96,15 +101,15 @@ class ChatViewModel : ViewModel() {
         Log.i("CSDN_INIT", "app start up initializer start")
         MainScope().launch(Dispatchers.IO) {
             val uuid = UUIDHelper[context]
-            Log.d("CSDN_DEBUG","uuid=${uuid}")
+            Log.d("CSDN_DEBUG", "uuid=${uuid}")
             val mediaFileCacheHelper = MediaFileCacheHelper()
             mediaFileCacheHelper.initDiskLruCache(context, 1)
             val db = Room
                 .databaseBuilder(context, AppDatabase::class.java, "database-csdn-android")
                 .build()
-            val messageDao = db.messageDao()
+            messageDao = db.messageDao()
             val lastMessage = messageDao.getLast()
-            val userDao = db.userDao()
+            userDao = db.userDao()
             withContext(Dispatchers.Main) {
                 withNewInitProgress(0.1f)
             }
@@ -115,8 +120,6 @@ class ChatViewModel : ViewModel() {
                 uuid,
                 client,
                 lastMessage?.id,
-                messageDao,
-                userDao,
                 this
             ) {
                 Log.d("CSDN_DEBUG_WEBSOCKET_STATUS", "status = $it")

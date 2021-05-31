@@ -210,48 +210,47 @@ class ConversationFragment : Fragment() {
                         }
                     }
                 }
-            } else {
-                if (chatData != null && chatServer != null && meProfile != null) {
-                    CompositionLocalProvider(
-                        LocalBackPressedDispatcher provides requireActivity().onBackPressedDispatcher,
-                        LocalWindowInsets provides windowInsets,
-                    ) {
-                        JetchatTheme {
-                            ConversationContent(
-                                chatData = chatData!!,
-                                onlineMembers = onlineMembers,
-                                messages = messages,
+            }
+            if (chatData != null && chatServer != null && meProfile != null) {
+                CompositionLocalProvider(
+                    LocalBackPressedDispatcher provides requireActivity().onBackPressedDispatcher,
+                    LocalWindowInsets provides windowInsets,
+                ) {
+                    JetchatTheme {
+                        ConversationContent(
+                            chatData = chatData!!,
+                            onlineMembers = onlineMembers,
+                            messages = messages,
 //                            uiState = ConversationUiState(chatData!!, onlineMembers, messages),
-                                navigateToProfile = { user ->
-                                    // Click callback
-                                    val bundle = bundleOf(
-                                        "profile" to user
-                                    )
-                                    findNavController().navigate(
-                                        R.id.nav_profile,
-                                        bundle
-                                    )
-                                },
-                                onNavIconPressed = {
-                                    activityViewModel.openDrawer()
-                                },
-                                // Add padding so that we are inset from any left/right navigation bars
-                                // (usually shown when in landscape orientation)
-                                modifier = Modifier.navigationBarsPadding(bottom = false),
-                                chatServer = chatServer!!,
-                                getProfile = {
-                                    chatServer!!.userDao.getByDisplayId(it)
-                                },
-                                meProfile = meProfile!!,
-                                chatServerOffline = !online,
-                                onImageSelect = {
-                                    launcher.launch("image/*")
-                                },
-                                painterClicked = {
-                                    fullScreenShowBitmap = it
-                                }
-                            )
-                        }
+                            navigateToProfile = { user ->
+                                // Click callback
+                                val bundle = bundleOf(
+                                    "profile" to user
+                                )
+                                findNavController().navigate(
+                                    R.id.nav_profile,
+                                    bundle
+                                )
+                            },
+                            onNavIconPressed = {
+                                activityViewModel.openDrawer()
+                            },
+                            // Add padding so that we are inset from any left/right navigation bars
+                            // (usually shown when in landscape orientation)
+                            modifier = Modifier.navigationBarsPadding(bottom = false),
+                            chatServer = chatServer!!,
+                            getProfile = {
+                                chatViewModel.userDao.getByDisplayId(it)
+                            },
+                            meProfile = meProfile!!,
+                            chatServerOffline = !online,
+                            onImageSelect = {
+                                launcher.launch("image/*")
+                            },
+                            painterClicked = {
+                                fullScreenShowBitmap = it
+                            }
+                        )
                     }
                 }
             }

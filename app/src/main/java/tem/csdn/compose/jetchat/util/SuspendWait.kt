@@ -9,8 +9,9 @@ class SuspendWait(private val owner: Any? = null, locked: Boolean = false) {
     private var onPauseHandler: ((Throwable?) -> Unit)? = null
     private var onResumeHandler: (() -> Unit)? = null
 
-    suspend fun pause() {
+    suspend fun pause(cause: Throwable? = null) {
         if (!mutex.isLocked) {
+            onPauseHandler?.invoke(cause)
             mutex.lock(owner)
         }
     }
@@ -25,7 +26,8 @@ class SuspendWait(private val owner: Any? = null, locked: Boolean = false) {
     }
 
     fun resume() {
-        if(mutex.isLocked){
+        if (mutex.isLocked) {
+            onResumeHandler?.invoke()
             mutex.unlock(owner)
         }
     }

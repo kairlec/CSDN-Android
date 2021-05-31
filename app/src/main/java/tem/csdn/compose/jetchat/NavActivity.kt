@@ -12,8 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidViewBinding
 import androidx.core.os.bundleOf
@@ -27,6 +29,8 @@ import tem.csdn.compose.jetchat.databinding.ContentMainBinding
 import com.google.accompanist.insets.ProvideWindowInsets
 import kotlinx.coroutines.*
 import tem.csdn.compose.jetchat.chat.ChatViewModel
+import tem.csdn.compose.jetchat.theme.JetchatTheme
+import tem.csdn.compose.jetchat.theme.elevatedSurface
 
 
 /**
@@ -58,16 +62,8 @@ class NavActivity : AppCompatActivity() {
                     targetValue = progress,
                     animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
                 )
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator(progress = animatedProgress)
-                    Spacer(Modifier.requiredHeight(30.dp))
-                    Text(stringResource(id = progressTextId))
+                JetchatTheme {
+                    Loading(animatedProgress, stringResource(id = progressTextId))
                 }
             } else {
                 // Provide WindowInsets to our content. We don't want to consume them, so that
@@ -141,5 +137,35 @@ class NavActivity : AppCompatActivity() {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         return navHostFragment.navController
+    }
+}
+
+@Preview
+@Composable
+fun LoadingPreview() {
+    JetchatTheme(isDarkTheme = true) {
+        Loading(progress = 0.5f, text = stringResource(id = R.string.wait_for_server_sync))
+    }
+}
+
+@Composable
+fun Loading(progress: Float, text: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CircularProgressIndicator(progress = progress)
+        Spacer(Modifier.requiredHeight(30.dp))
+        Text(
+            color = if (MaterialTheme.colors.isLight) {
+                Color.Unspecified
+            } else {
+                Color(0xFFDEDEDE)
+            },
+            text = text
+        )
     }
 }

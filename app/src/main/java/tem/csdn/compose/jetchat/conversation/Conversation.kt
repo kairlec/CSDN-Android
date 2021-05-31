@@ -45,22 +45,27 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.insets.*
 import tem.csdn.compose.jetchat.FunctionalityNotAvailablePopup
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.components.JetchatAppBar
 import tem.csdn.compose.jetchat.theme.elevatedSurface
-import com.google.accompanist.insets.LocalWindowInsets
-import com.google.accompanist.insets.navigationBarsWithImePadding
-import com.google.accompanist.insets.statusBarsPadding
-import com.google.accompanist.insets.toPaddingValues
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.features.cookies.*
+import io.ktor.client.features.json.*
+import io.ktor.client.features.websocket.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.data.RawWebSocketFrameWrapper
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.theme.JetchatTheme
 import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.LocalTime
@@ -385,10 +390,8 @@ fun Message(
         MaterialTheme.colors.secondary
     }
 
-    val spaceBetweenAuthors = if (isLastMessageByAuthor) Modifier.padding(top = 8.dp) else Modifier
-
     @Composable
-    fun RowScope.Photo() {
+    fun Photo() {
         if (isLastMessageByAuthor) {
             // Avatar
             msg.author.getPhotoPainter(chatServer)?.let {
@@ -402,8 +405,7 @@ fun Message(
                                 .size(42.dp)
                                 .border(1.5.dp, borderColor, CircleShape)
                                 .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                                .clip(CircleShape)
-                                .align(Alignment.Top),
+                                .clip(CircleShape),
                             painter = painterResource(id = R.drawable.ic_broken_cable),
                             contentScale = ContentScale.Crop,
                             contentDescription = null,
@@ -417,8 +419,7 @@ fun Message(
                                 .size(42.dp)
                                 .border(1.5.dp, borderColor, CircleShape)
                                 .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                                .clip(CircleShape)
-                                .align(Alignment.Top),
+                                .clip(CircleShape),
                             painter = painterResource(id = R.drawable.ic_loading),
                             contentScale = ContentScale.Crop,
                             contentDescription = null,
@@ -432,8 +433,7 @@ fun Message(
                             .size(42.dp)
                             .border(1.5.dp, borderColor, CircleShape)
                             .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                            .clip(CircleShape)
-                            .align(Alignment.Top),
+                            .clip(CircleShape),
                         painter = it,
                         contentScale = ContentScale.Crop,
                         contentDescription = null,
@@ -447,8 +447,7 @@ fun Message(
                         .size(42.dp)
                         .border(1.5.dp, borderColor, CircleShape)
                         .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                        .clip(CircleShape)
-                        .align(Alignment.Top),
+                        .clip(CircleShape),
                     painter = painterResource(id = R.drawable.ic_default_avatar_man),
                     contentScale = ContentScale.Crop,
                     contentDescription = null,
@@ -476,12 +475,12 @@ fun Message(
         )
     }
 
+    val spaceBetweenAuthors = if (isLastMessageByAuthor) Modifier.padding(top = 8.dp) else Modifier
+
     Row(modifier = spaceBetweenAuthors) {
         if (isUserMe) {
             AuthorAndTextMessage(
                 Modifier
-                    .padding(end = 16.dp)
-                    .wrapContentWidth(Alignment.End)
                     .weight(1f)
             )
             Photo()
@@ -509,7 +508,8 @@ fun AuthorAndTextMessage(
     modifier: Modifier = Modifier,
     msgTimeString: String
 ) {
-    Column(modifier = modifier) {
+    @Composable
+    fun Content() {
         if (isLastMessageByAuthor) {
             AuthorNameTimestamp(msg, isUserMe, msgTimeString)
         }
@@ -524,10 +524,24 @@ fun AuthorAndTextMessage(
         )
         if (isFirstMessageByAuthor) {
             // Last bubble before next author
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         } else {
             // Between bubbles
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+    if (isUserMe) {
+        Column(
+            modifier = modifier,
+            horizontalAlignment = Alignment.End
+        ) {
+            Content()
+        }
+    } else {
+        Column(
+            modifier = modifier,
+        ) {
+            Content()
         }
     }
 }
@@ -547,7 +561,7 @@ private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: 
     }
 
     @Composable
-    fun RowScope.TextContent(text: String) {
+    fun RowScope.AuthorName(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.subtitle1,
@@ -556,19 +570,17 @@ private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: 
                 .paddingFrom(LastBaseline, after = 8.dp) // Space to 1st bubble
         )
     }
-    if (isUserMe) {
-        Row(
-            modifier = Modifier.semantics(mergeDescendants = true) {}
-        ) {
+
+    Row(
+        modifier = Modifier.semantics(mergeDescendants = true) {}
+    ) {
+        if (isUserMe) {
             TimeString()
             Spacer(modifier = Modifier.width(8.dp))
-            TextContent("${msg.author.displayName}(${stringResource(id = R.string.author_me)})")
-        }
-    } else {
-        Row(
-            modifier = Modifier.semantics(mergeDescendants = true) {}
-        ) {
-            TextContent(msg.author.displayName)
+            //AuthorName("${msg.author.displayName}(${stringResource(id = R.string.author_me)})")
+            AuthorName(stringResource(id = R.string.author_me))
+        } else {
+            AuthorName(msg.author.displayName)
             Spacer(modifier = Modifier.width(8.dp))
             TimeString()
         }
@@ -621,9 +633,17 @@ fun ChatItemBubble(
 ) {
     val backgroundBubbleColor =
         if (MaterialTheme.colors.isLight) {
-            Color(0xFFF5F5F5)
+            if (isUserMe) {
+                Color(0xFFD1B3FF)
+            } else {
+                Color(0xFFF5F5F5)
+            }
         } else {
-            MaterialTheme.colors.elevatedSurface(2.dp)
+            if (isUserMe) {
+                Color(0xFF5C0099)
+            } else {
+                MaterialTheme.colors.elevatedSurface(2.dp)
+            }
         }
 
     val bubbleShape = if (lastMessageByAuthor) {
@@ -639,14 +659,7 @@ fun ChatItemBubble(
             ChatBubbleShape
         }
     }
-    val modifier = if (isUserMe) {
-        Modifier.wrapContentWidth(Alignment.End)
-    } else {
-        Modifier
-    }
-    Column(
-        modifier = modifier
-    ) {
+    Column {
         if (message.image == true) {
             message.getImagePainter(chatServer)?.let {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -731,18 +744,63 @@ fun ClickableMessage(
         }
     )
 }
-//
-//@Preview
-//@Composable
-//fun ConversationPreview() {
-//    JetchatTheme {
-//        ConversationContent(
-//            uiState = exampleUiState,
-//            navigateToProfile = { },
-//            chatAPI = ChatAPI("")
-//        )
-//    }
-//}
+
+@Preview
+@Composable
+fun ConversationPreview() {
+    val client = HttpClient {
+    }
+    val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
+    val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    val messages =
+        listOf(
+            Message(1, "卧槽", (System.currentTimeMillis() / 1000).toInt(), false, meProfile),
+            Message(
+                2,
+                "长消息卧槽",
+                (System.currentTimeMillis() / 1000 + 120).toInt(),
+                false,
+                meProfile
+            ),
+            Message(
+                3,
+                "卧槽O",
+                (System.currentTimeMillis() / 1000 + 240).toInt(),
+                false,
+                otherProfile
+            ),
+            Message(
+                4,
+                "长消息卧槽O",
+                (System.currentTimeMillis() / 1000 + 360).toInt(),
+                false,
+                otherProfile
+            )
+        )
+    JetchatTheme(isDarkTheme = true) {
+        val coroutineScope = rememberCoroutineScope()
+        ConversationContent(
+            chatData = ChatDataScreenState("SCN105NBTest"),
+            chatServerOffline = false,
+            onlineMembers = 2,
+            messages = messages,
+            navigateToProfile = { },
+            getProfile = { meProfile },
+            chatServer = ChatServer(
+                ChatAPI(false, "120.77.179.218", 18080),
+                "uuid",
+                client,
+                null,
+                coroutineScope
+            ) { },
+            meProfile = meProfile,
+            painterClicked = {},
+            onImageSelect = {},
+            onNavIconPressed = {},
+            modifier = Modifier.navigationBarsPadding(bottom = false)
+        )
+    }
+}
 //
 //@Preview
 //@Composable

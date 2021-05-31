@@ -11,8 +11,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import tem.csdn.compose.jetchat.chat.ChatAPI
-import tem.csdn.compose.jetchat.dao.MessageDao
-import tem.csdn.compose.jetchat.dao.UserDao
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.util.ReservableActor
@@ -31,9 +29,7 @@ class ChatServer(
     val id: String,
     private val client: HttpClient,
     private val lastMessageId: Long?,
-    val messageDao: MessageDao,
-    val userDao: UserDao,
-    val coroutineScope: CoroutineScope,
+    coroutineScope: CoroutineScope,
     val onWebSocketEvent: suspend (Boolean) -> Unit
 ) {
     companion object {
@@ -47,13 +43,15 @@ class ChatServer(
 
     // 这个锁用来保持WebSocket不会被关闭,防止提前关闭输出导致需要重新连接
     private val webSocketKeepAliveMutex = Mutex()
-    private val inputReservableActor = ReservableActor<RawWebSocketFrameWrapper<*>>(
-        coroutineScope = coroutineScope,
-        context = Dispatchers.IO,
-        capacity = Channel.UNLIMITED,
-        start = CoroutineStart.LAZY
-    )
-    val outputChannel = Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED)
+    private val inputReservableActor by lazy {
+        ReservableActor<RawWebSocketFrameWrapper<*>>(
+            coroutineScope = coroutineScope,
+            context = Dispatchers.IO,
+            capacity = Channel.UNLIMITED,
+            start = CoroutineStart.LAZY
+        )
+    }
+    val outputChannel by lazy { Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED) }
 
     suspend fun getMeProfile(): User {
         return client.post<Result<User>>(chatAPI.init(id)).checked().data!!.apply {
