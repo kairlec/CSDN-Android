@@ -209,6 +209,7 @@ class ChatViewModel : ViewModel() {
                         }) {
                             Log.d("CSDN_DEBUG", "websocket has disconnect,stop heartbeat job")
                             heartBeatJob?.cancel()
+                            lastHeartBeatUUIDString = null
                             //断开就重新加载并重连
                             while (isActive) {
                                 try {
