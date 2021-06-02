@@ -6,6 +6,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.*
 import io.ktor.client.features.websocket.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -52,6 +54,21 @@ class ChatServer(
         )
     }
     val outputChannel by lazy { Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED) }
+
+    suspend fun updateProfile(user: User): User {
+        return client.post<Result<User>>(chatAPI.profile()) {
+            body = FormDataContent(Parameters.build {
+                append("name", user.name)
+                append("displayName", user.displayName)
+                append("position", user.position)
+                append("github", user.github ?: "")
+                append("qq", user.qq ?: "")
+                append("weChat", user.weChat ?: "")
+            })
+        }.checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "update profile:${this}")
+        }
+    }
 
     suspend fun getMeProfile(): User {
         return client.post<Result<User>>(chatAPI.init(id)).checked().data!!.apply {

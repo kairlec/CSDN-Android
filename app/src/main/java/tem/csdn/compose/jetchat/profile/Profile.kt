@@ -1,41 +1,24 @@
 package tem.csdn.compose.jetchat.profile
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ContentAlpha
-import androidx.compose.material.Divider
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.outlined.Save
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -59,7 +42,10 @@ import tem.csdn.compose.jetchat.model.User
 fun ProfileScreen(
     userData: User,
     meProfile: User,
-    chatServer: ChatServer,
+    chatServer: ChatServer?,
+    editMode: Boolean = false,
+    onEditSubmit: (User) -> Unit,
+    onEditModeClick: () -> Unit,
     onNavIconPressed: () -> Unit = { }
 ) {
     var functionalityNotAvailablePopupShown by remember { mutableStateOf(false) }
@@ -91,6 +77,7 @@ fun ProfileScreen(
                 }
             }
         )
+        var getNewUser: (() -> User?)? = null
         BoxWithConstraints(modifier = Modifier.weight(1f)) {
             Surface {
                 Column(
@@ -98,20 +85,152 @@ fun ProfileScreen(
                         .fillMaxSize()
                         .verticalScroll(scrollState),
                 ) {
-                    ProfileHeader(
-                        scrollState,
-                        userData,
-                        this@BoxWithConstraints.maxHeight,
-                        chatServer
-                    )
-                    UserInfoFields(userData, this@BoxWithConstraints.maxHeight)
+                    if (chatServer != null) {
+                        ProfileHeader(
+                            scrollState,
+                            userData,
+                            this@BoxWithConstraints.maxHeight,
+                            chatServer
+                        )
+                    }
+                    if (!editMode) {
+                        UserInfoFields(userData, this@BoxWithConstraints.maxHeight)
+                    } else {
+                        val name = remember {
+                            mutableStateOf(userData.name)
+                        }
+                        val displayName = remember {
+                            mutableStateOf(userData.displayName)
+                        }
+                        val position = remember {
+                            mutableStateOf(userData.position)
+                        }
+                        val qq = remember {
+                            mutableStateOf(userData.qq ?: "")
+                        }
+                        val weChat = remember {
+                            mutableStateOf(userData.weChat ?: "")
+                        }
+                        val github = remember {
+                            mutableStateOf(userData.github ?: "")
+                        }
+                        val context = LocalContext.current
+                        getNewUser = {
+                            when {
+                                name.value.isBlank() -> {
+                                    Toast.makeText(context, "用户名不能为空", Toast.LENGTH_SHORT).show()
+                                    null
+                                }
+                                displayName.value.isBlank() -> {
+                                    Toast.makeText(context, "昵称不能为空", Toast.LENGTH_SHORT).show()
+                                    null
+                                }
+                                else -> {
+                                    User(
+                                        meProfile.displayId,
+                                        name.value,
+                                        displayName.value,
+                                        position.value,
+                                        photo = meProfile.photo,
+                                        github.value,
+                                        qq.value,
+                                        weChat.value
+                                    )
+                                }
+                            }
+                        }
+                        Column {
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                NameEdit(
+                                    name,
+                                    modifier = Modifier.baselineHeight(32.dp),
+                                    stringResource(id = R.string.please_input_name)
+                                )
+                                PositionEdit(
+                                    position,
+                                    modifier = Modifier
+                                        .padding(bottom = 20.dp)
+                                        .baselineHeight(24.dp),
+                                    "${stringResource(id = R.string.please_input_position)}(${
+                                        stringResource(
+                                            id = R.string.optional
+                                        )
+                                    })"
+                                )
+                            }
+
+                            ProfileEditProperty(
+                                stringResource(R.string.display_name),
+                                displayName,
+                                stringResource(id = R.string.please_input_display_name)
+                            )
+
+                            ProfileEditProperty(
+                                stringResource(id = R.string.qq),
+                                qq,
+                                "${stringResource(id = R.string.please_input_qq)}(${
+                                    stringResource(
+                                        id = R.string.optional
+                                    )
+                                })"
+                            )
+
+                            ProfileEditProperty(
+                                stringResource(id = R.string.wechat),
+                                weChat,
+                                "${stringResource(id = R.string.please_input_wechat)}(${
+                                    stringResource(
+                                        id = R.string.optional
+                                    )
+                                })"
+                            )
+
+                            ProfileEditProperty(
+                                stringResource(id = R.string.github),
+                                github,
+                                "${stringResource(id = R.string.please_input_github)}(${
+                                    stringResource(
+                                        id = R.string.optional
+                                    )
+                                })"
+                            )
+
+                            // Add a spacer that always shows part (320.dp) of the fields list regardless of the device,
+                            // in order to always leave some content at the top.
+                            Spacer(
+                                Modifier.height(
+                                    (this@BoxWithConstraints.maxHeight - 320.dp).coerceAtLeast(
+                                        0.dp
+                                    )
+                                )
+                            )
+                        }
+                    }
                 }
             }
+            val userIsMe = userData.displayId == meProfile.displayId
             ProfileFab(
                 extended = scrollState.value == 0,
-                userIsMe = userData.displayId == meProfile.displayId,
+                userIsMe = userIsMe,
                 modifier = Modifier.align(Alignment.BottomEnd),
-                onFabClicked = { functionalityNotAvailablePopupShown = true }
+                editMode = editMode,
+                onFabClicked = {
+                    when {
+                        editMode -> {
+                            getNewUser?.invoke()?.let {
+                                onEditSubmit(it)
+                            }
+                        }
+                        userIsMe -> {
+                            onEditModeClick()
+                        }
+                        else -> {
+                            functionalityNotAvailablePopupShown = true
+                        }
+                    }
+                }
             )
         }
     }
@@ -127,13 +246,19 @@ private fun UserInfoFields(userData: User, containerHeight: Dp) {
         ProfileProperty(stringResource(R.string.display_name), userData.displayName)
 
         userData.qq?.let {
-            ProfileProperty(stringResource(id = R.string.qq), it)
+            if (it.isNotBlank()) {
+                ProfileProperty(stringResource(id = R.string.qq), it)
+            }
         }
         userData.weChat?.let {
-            ProfileProperty(stringResource(id = R.string.wechat), it)
+            if (it.isNotBlank()) {
+                ProfileProperty(stringResource(id = R.string.wechat), it)
+            }
         }
         userData.github?.let {
-            ProfileProperty(stringResource(id = R.string.github), it, isLink = true)
+            if (it.isNotBlank()) {
+                ProfileProperty(stringResource(id = R.string.github), it, isLink = true)
+            }
         }
 
         // Add a spacer that always shows part (320.dp) of the fields list regardless of the device,
@@ -160,6 +285,7 @@ private fun NameAndPosition(
     }
 }
 
+
 @Composable
 private fun Name(userData: User, modifier: Modifier = Modifier) {
     Text(
@@ -176,6 +302,60 @@ private fun Position(userData: User, modifier: Modifier = Modifier) {
             text = userData.position,
             modifier = modifier,
             style = MaterialTheme.typography.body1
+        )
+    }
+}
+
+@Composable
+private fun NameEdit(
+    text: MutableState<String>,
+    modifier: Modifier = Modifier,
+    placeholder: String
+) {
+    TextField(
+        value = text.value,
+        onValueChange = {
+            text.value = it
+        },
+        modifier = modifier,
+        textStyle = MaterialTheme.typography.h5,
+        colors = TextFieldDefaults.textFieldColors(
+            backgroundColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        ),
+        maxLines = 1,
+        placeholder = {
+            Text(text = placeholder, style = MaterialTheme.typography.h5, modifier = modifier)
+        }
+    )
+}
+
+@Composable
+private fun PositionEdit(
+    text: MutableState<String>,
+    modifier: Modifier = Modifier,
+    placeholder: String
+) {
+    CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+        TextField(
+            value = text.value,
+            onValueChange = {
+                text.value = it
+            },
+            modifier = modifier,
+            textStyle = MaterialTheme.typography.body1,
+            colors = TextFieldDefaults.textFieldColors(
+                backgroundColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            ),
+            maxLines = 1,
+            placeholder = {
+                Text(
+                    text = placeholder,
+                )
+            }
         )
     }
 }
@@ -262,6 +442,45 @@ fun ProfileProperty(label: String, value: String, isLink: Boolean = false) {
 }
 
 @Composable
+fun ProfileEditProperty(
+    label: String,
+    value: MutableState<String>,
+    placeholder: String
+) {
+    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 16.dp)) {
+        Divider()
+        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+            TextField(
+                label = {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.caption
+                    )
+                },
+                value = value.value,
+                onValueChange = {
+                    value.value = it
+                },
+                modifier = Modifier.baselineHeight(24.dp),
+                maxLines = 1,
+                textStyle = MaterialTheme.typography.body1,
+                colors = TextFieldDefaults.textFieldColors(
+                    backgroundColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                placeholder = {
+                    Text(
+                        text = placeholder,
+                        style = MaterialTheme.typography.body1,
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
 fun ProfileError() {
     Text(stringResource(R.string.profile_error))
 }
@@ -271,6 +490,7 @@ fun ProfileFab(
     extended: Boolean,
     userIsMe: Boolean,
     modifier: Modifier = Modifier,
+    editMode: Boolean,
     onFabClicked: () -> Unit = { }
 ) {
     if (userIsMe) {
@@ -285,40 +505,83 @@ fun ProfileFab(
                 backgroundColor = MaterialTheme.colors.primary,
                 contentColor = MaterialTheme.colors.onPrimary
             ) {
+                val text = when {
+                    editMode -> R.string.save_profile
+                    userIsMe -> R.string.edit_profile
+                    else -> R.string.message
+                }
+                val icon = when {
+                    editMode -> Icons.Outlined.Save
+                    userIsMe -> Icons.Outlined.Create
+                    else -> Icons.Outlined.Chat
+                }
                 AnimatingFabContent(
                     icon = {
                         Icon(
-                            imageVector = if (userIsMe) Icons.Outlined.Create else Icons.Outlined.Chat,
-                            contentDescription = stringResource(
-                                if (userIsMe) R.string.edit_profile else R.string.message
-                            )
+                            imageVector = icon,
+                            contentDescription = stringResource(text)
                         )
                     },
                     text = {
                         Text(
-                            text = stringResource(
-                                id = if (userIsMe) R.string.edit_profile else R.string.message
-                            ),
+                            text = stringResource(text),
                         )
                     },
                     extended = extended
-
                 )
             }
         }
     }
 }
 
-//@Preview(widthDp = 640, heightDp = 360)
-//@Composable
-//fun ConvPreviewLandscapeMeDefault() {
-//    ProvideWindowInsets(consumeWindowInsets = false) {
-//        JetchatTheme {
-//            ProfileScreen(meProfile, ChatAPI(""))
-//        }
-//    }
-//}
-//
+@Preview
+@Composable
+fun ConvPreviewLandscapeMeDefault() {
+    val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
+    val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    ProvideWindowInsets(consumeWindowInsets = false) {
+        JetchatTheme {
+            ProfileScreen(meProfile, meProfile, null, true, {}, {}, {})
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ConvPreviewLandscapeMeDefaultDark() {
+    val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
+    val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    ProvideWindowInsets(consumeWindowInsets = false) {
+        JetchatTheme(isDarkTheme = true) {
+            ProfileScreen(meProfile, meProfile, null, true, {}, {}, {})
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ConvPreviewLandscapeOtherDefault() {
+    val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
+    val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    ProvideWindowInsets(consumeWindowInsets = false) {
+        JetchatTheme {
+            ProfileScreen(otherProfile, meProfile, null, false, {}, {}, {})
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ConvPreviewLandscapeMeShowOnly() {
+    val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
+    val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    ProvideWindowInsets(consumeWindowInsets = false) {
+        JetchatTheme {
+            ProfileScreen(meProfile, meProfile, null, false, {}, {}, {})
+        }
+    }
+}
+
 //@Preview(widthDp = 360, heightDp = 480)
 //@Composable
 //fun ConvPreviewPortraitMeDefault() {
@@ -328,7 +591,7 @@ fun ProfileFab(
 //        }
 //    }
 //}
-//
+
 //@Preview(widthDp = 360, heightDp = 480)
 //@Composable
 //fun ConvPreviewPortraitOtherDefault() {
@@ -344,7 +607,7 @@ fun ProfileFab(
 fun ProfileFabPreview() {
     ProvideWindowInsets(consumeWindowInsets = false) {
         JetchatTheme {
-            ProfileFab(extended = true, userIsMe = false)
+            ProfileFab(extended = true, userIsMe = true, editMode = true)
         }
     }
 }

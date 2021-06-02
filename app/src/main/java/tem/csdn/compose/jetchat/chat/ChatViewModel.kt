@@ -38,6 +38,10 @@ class ChatViewModel : ViewModel() {
         textId?.let { _initProgressTextId.value = it }
     }
 
+    fun updateProfile(user: User) {
+        this._meProfile.value = user
+    }
+
     private var inited = false
     private var reloading = false
     lateinit var messageDao: MessageDao

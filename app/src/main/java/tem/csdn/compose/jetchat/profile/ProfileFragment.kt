@@ -5,21 +5,31 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import tem.csdn.compose.jetchat.MainViewModel
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ViewWindowInsetObserver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.model.User
 
 class ProfileFragment : Fragment() {
-    private val chatViewModel:ChatViewModel by activityViewModels()
+    private val chatViewModel: ChatViewModel by activityViewModels()
     private val viewModel: ProfileViewModel by activityViewModels()
     private val activityViewModel: MainViewModel by activityViewModels()
 
@@ -49,6 +59,10 @@ class ProfileFragment : Fragment() {
             val userData by viewModel.userData.observeAsState()
             val chatServer by chatViewModel.chatServer.observeAsState()
             val meProfile by chatViewModel.meProfile.observeAsState()
+            val context = LocalContext.current
+            val updateFailedText = stringResource(id = R.string.update_failed)
+            var editMode by mutableStateOf(false)
+
             CompositionLocalProvider(LocalWindowInsets provides windowInsets) {
                 JetchatTheme {
                     if (userData == null) {
@@ -60,6 +74,30 @@ class ProfileFragment : Fragment() {
                                 activityViewModel.openDrawer()
                             },
                             chatServer = chatServer!!,
+                            editMode = editMode,
+                            onEditSubmit = { user ->
+                                MainScope().launch(Dispatchers.IO) {
+                                    try {
+                                        val newUser = chatServer!!.updateProfile(user)
+                                        withContext(Dispatchers.Main) {
+                                            chatViewModel.updateProfile(newUser)
+                                            viewModel.setProfile(newUser)
+                                            editMode = false
+                                        }
+                                    } catch (e: Throwable) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                updateFailedText,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                }
+                            },
+                            onEditModeClick = {
+                                editMode = true
+                            },
                             meProfile = meProfile!!
                         )
                     }

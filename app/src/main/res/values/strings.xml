@@ -11,7 +11,7 @@
     <string name="emojis_label">表情</string>
     <string name="stickers_label">贴纸</string>
 
-    <string name="message">消息</string>
+    <string name="message">私聊</string>
     <string name="edit_profile">编辑用户信息</string>
     <string name="profile_error">加载用户信息失败</string>
     <string name="display_name">用户名</string>
@@ -57,5 +57,14 @@
     <string name="image_upload_failed">发送图片失败</string>
     <string name="retry">重试</string>
     <string name="ok">确定</string>
+    <string name="save_profile">保存</string>
+    <string name="update_failed">更新失败</string>
+    <string name="please_input_name">请输入名字</string>
+    <string name="please_input_position">请输入位置</string>
+    <string name="please_input_display_name">请输入昵称</string>
+    <string name="please_input_qq">请输入QQ</string>
+    <string name="please_input_wechat">请输入微信号</string>
+    <string name="please_input_github">请输入Github名</string>
+    <string name="optional">可选的</string>
 
 </resources>

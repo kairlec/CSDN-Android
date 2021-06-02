@@ -10,7 +10,7 @@
     <string name="textfield_hint">say something…</string>
     <string name="emojis_label">emojis</string>
     <string name="stickers_label">stickers</string>
-    <string name="message">message</string>
+    <string name="message">Priv Chat</string>
     <string name="edit_profile">Edit Profile</string>
     <string name="profile_error">Load profile error</string>
     <string name="display_name">display name</string>
@@ -48,4 +48,13 @@
     <string name="image_upload_failed">Send image failed</string>
     <string name="retry">Retry</string>
     <string name="ok">OK</string>
+    <string name="save_profile">Save</string>
+    <string name="update_failed">Update failed</string>
+    <string name="please_input_name">Please input name</string>
+    <string name="please_input_position">Please input position</string>
+    <string name="please_input_display_name">Please input display name</string>
+    <string name="please_input_qq">Please input QQ</string>
+    <string name="please_input_wechat">Please input wechat</string>
+    <string name="please_input_github">Please input Github</string>
+    <string name="optional">Optional</string>
 </resources>
