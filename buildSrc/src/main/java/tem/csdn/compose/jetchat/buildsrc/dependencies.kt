@@ -1,19 +1,3 @@
-/*
- * Copyright 2020 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package tem.csdn.compose.jetchat.buildsrc
 
 object Versions {
@@ -21,23 +5,53 @@ object Versions {
 }
 
 object Libs {
-    const val androidGradlePlugin = "com.android.tools.build:gradle:7.0.0-alpha15"
+    const val androidGradlePlugin = "com.android.tools.build:gradle:7.1.0-alpha01"
     const val jdkDesugar = "com.android.tools:desugar_jdk_libs:1.0.9"
 
     const val junit = "junit:junit:4.13"
 
     const val material = "com.google.android.material:material:1.3.0"
+    const val disklrucache = "com.jakewharton:disklrucache:2.0.2"
+
+    const val tiny = "com.zxy.android:tiny:1.1.0"
+
+    object Landscapist{
+        private const val version = "1.2.2"
+        const val fresco = "com.github.skydoves:landscapist-fresco:$version"
+    }
 
     object Accompanist {
-        private const val version = "0.9.0"
+        private const val version = "0.10.0"
         const val insets = "com.google.accompanist:accompanist-insets:$version"
+        const val glide = "com.google.accompanist:accompanist-glide:$version"
+        const val glide_okhttp3 = "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     }
 
     object Kotlin {
         private const val version = "1.4.32"
-        const val stdlib = "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$version"
+        const val stdlib_jdk8 = "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$version"
         const val gradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:$version"
         const val extensions = "org.jetbrains.kotlin:kotlin-android-extensions:$version"
+        const val common = "org.jetbrains.kotlin:kotlin-stdlib-common:$version"
+        const val stdlib = "org.jetbrains.kotlin:kotlin-stdlib:$version"
+        const val reflect = "org.jetbrains.kotlin:kotlin-reflect:$version"
+    }
+
+    object Ktor {
+        private const val version = "1.5.4"
+        const val android = "io.ktor:ktor-client-android:$version"
+        const val serialization = "io.ktor:ktor-client-serialization:$version"
+        const val logging = "io.ktor:ktor-client-logging-jvm:$version"
+        const val cio = "io.ktor:ktor-client-cio:$version"
+        const val okhttp = "io.ktor:ktor-client-okhttp:$version"
+        const val okhttp_interceptor ="com.squareup.okhttp3:logging-interceptor:4.6.0"
+        const val jackson = "io.ktor:ktor-client-jackson:$version"
+        const val websockets = "io.ktor:ktor-client-websockets:$version"
+    }
+
+    object KotlinX {
+        private const val version = "1.2.1"
+        const val serialization = "org.jetbrains.kotlinx:kotlinx-serialization-json:$version"
     }
 
     object Coroutines {
@@ -48,21 +62,23 @@ object Libs {
     }
 
     object AndroidX {
-        const val appcompat = "androidx.appcompat:appcompat:1.3.0-rc01"
-        const val coreKtx = "androidx.core:core-ktx:1.6.0-alpha01"
+        const val appcompat = "androidx.appcompat:appcompat:1.3.0"
+        const val coreKtx = "androidx.core:core-ktx:1.6.0-alpha03"
+        const val startup = "androidx.startup:startup-runtime:1.1.0-alpha01"
 
         object Activity {
-            const val activityCompose = "androidx.activity:activity-compose:1.3.0-alpha07"
+            const val activityCompose = "androidx.activity:activity-compose:1.3.0-alpha08"
         }
 
         object Compose {
             const val snapshot = ""
-            const val version = "1.0.0-beta06"
+            const val version = "1.0.0-beta07"
 
             const val foundation = "androidx.compose.foundation:foundation:$version"
             const val layout = "androidx.compose.foundation:foundation-layout:$version"
             const val material = "androidx.compose.material:material:$version"
-            const val materialIconsExtended = "androidx.compose.material:material-icons-extended:$version"
+            const val materialIconsExtended =
+                "androidx.compose.material:material-icons-extended:$version"
             const val runtime = "androidx.compose.runtime:runtime:$version"
             const val runtimeLivedata = "androidx.compose.runtime:runtime-livedata:$version"
             const val tooling = "androidx.compose.ui:ui-tooling:$version"
@@ -96,12 +112,27 @@ object Libs {
             const val extensions = "androidx.lifecycle:lifecycle-extensions:$version"
             const val livedata = "androidx.lifecycle:lifecycle-livedata-ktx:$version"
             const val viewmodel = "androidx.lifecycle:lifecycle-viewmodel-ktx:$version"
-            const val viewModelCompose = "androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha04"
+            const val viewModelCompose =
+                "androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha05"
+        }
+
+        object Ads {
+            private const val version = "1.0.0-alpha04"
+            const val identifier = "androidx.ads:ads-identifier:$version"
+        }
+
+        object Room {
+            private const val version = "2.3.0"
+            const val runtime = "androidx.room:room-runtime:$version"
+            const val kapt = "androidx.room:room-compiler:$version"
+            const val ktx = "androidx.room:room-ktx:$version"
+            const val testing = "androidx.room:room-testing:$version"
         }
     }
 }
 
 object Urls {
-    const val composeSnapshotRepo = "https://androidx.dev/snapshots/builds/${Libs.AndroidX.Compose.snapshot}/artifacts/repository/"
+    const val composeSnapshotRepo =
+        "https://androidx.dev/snapshots/builds/${Libs.AndroidX.Compose.snapshot}/artifacts/repository/"
     const val accompanistSnapshotRepo = "https://oss.sonatype.org/content/repositories/snapshots"
 }

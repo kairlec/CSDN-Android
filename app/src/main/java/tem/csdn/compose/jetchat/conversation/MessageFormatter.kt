@@ -1,19 +1,3 @@
-/*
- * Copyright 2020 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package tem.csdn.compose.jetchat.conversation
 
 import androidx.compose.material.Colors
@@ -29,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
+import tem.csdn.compose.jetchat.model.User
 
 // Regex containing the syntax tokens
 val symbolPattern by lazy {
@@ -57,7 +42,8 @@ typealias SymbolAnnotation = Pair<AnnotatedString, StringAnnotation?>
  */
 @Composable
 fun messageFormatter(
-    text: String
+    text: String,
+    getProfile: (String) -> User?
 ): AnnotatedString {
     val tokens = symbolPattern.findAll(text)
 
@@ -78,7 +64,8 @@ fun messageFormatter(
             val (annotatedString, stringAnnotation) = getSymbolAnnotation(
                 matchResult = token,
                 colors = MaterialTheme.colors,
-                codeSnippetBackground = codeSnippetBackground
+                codeSnippetBackground = codeSnippetBackground,
+                getProfile = getProfile
             )
             append(annotatedString)
 
@@ -107,24 +94,33 @@ fun messageFormatter(
 private fun getSymbolAnnotation(
     matchResult: MatchResult,
     colors: Colors,
-    codeSnippetBackground: Color
+    codeSnippetBackground: Color,
+    getProfile: (String) -> User?
 ): SymbolAnnotation {
     return when (matchResult.value.first()) {
-        '@' -> SymbolAnnotation(
-            AnnotatedString(
-                text = matchResult.value,
-                spanStyle = SpanStyle(
-                    color = colors.primary,
-                    fontWeight = FontWeight.Bold
+        '@' -> {
+            val userId = matchResult.value.substring(1)
+            val profile = getProfile(userId)
+            if (profile == null) {
+                SymbolAnnotation(AnnotatedString(matchResult.value), null)
+            } else {
+                SymbolAnnotation(
+                    AnnotatedString(
+                        text = "@${profile.displayName}",
+                        spanStyle = SpanStyle(
+                            color = colors.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    ),
+                    StringAnnotation(
+                        item = userId,
+                        start = matchResult.range.first,
+                        end = matchResult.range.first + profile.displayName.length,
+                        tag = SymbolAnnotationType.PERSON.name
+                    )
                 )
-            ),
-            StringAnnotation(
-                item = matchResult.value.substring(1),
-                start = matchResult.range.first,
-                end = matchResult.range.last,
-                tag = SymbolAnnotationType.PERSON.name
-            )
-        )
+            }
+        }
         '*' -> SymbolAnnotation(
             AnnotatedString(
                 text = matchResult.value.trim('*'),

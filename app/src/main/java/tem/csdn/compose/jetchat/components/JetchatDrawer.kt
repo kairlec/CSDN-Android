@@ -1,26 +1,8 @@
-/*
- * Copyright 2020 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package tem.csdn.compose.jetchat.components
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,7 +17,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -44,28 +25,52 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tem.csdn.compose.jetchat.R
-import tem.csdn.compose.jetchat.data.colleagueProfile
-import tem.csdn.compose.jetchat.data.meProfile
-import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.statusBarsHeight
+import tem.csdn.compose.jetchat.chat.ChatDataScreenState
+import tem.csdn.compose.jetchat.conversation.LoadImage
+import tem.csdn.compose.jetchat.data.ChatServer
+import tem.csdn.compose.jetchat.model.User
 
 @Composable
-fun ColumnScope.JetchatDrawer(onProfileClicked: (String) -> Unit, onChatClicked: (String) -> Unit) {
+fun ColumnScope.JetchatDrawer(
+    onProfileClicked: (User) -> Unit,
+    onChatClicked: () -> Unit,
+    chat: ChatDataScreenState,
+    chatServer: ChatServer,
+    chatServerOffline: Boolean,
+    profiles: Iterable<User>,
+    meProfile: User,
+) {
     // Use statusBarsHeight() to add a spacer which pushes the drawer content
     // below the status bar (y-axis)
     Spacer(Modifier.statusBarsHeight())
     DrawerHeader()
     Divider()
-    DrawerItemHeader("Chats")
-    ChatItem("composers", true) { onChatClicked("composers") }
-    ChatItem("droidcon-nyc", false) { onChatClicked("droidcon-nyc") }
-    DrawerItemHeader("Recent Profiles")
-    ProfileItem("Ali Conors (you)", meProfile.photo) { onProfileClicked(meProfile.userId) }
-    ProfileItem("Taylor Brooks", colleagueProfile.photo) {
-        onProfileClicked(colleagueProfile.userId)
+    val channelName = if (chatServerOffline) {
+        "${chat.displayName}(${stringResource(id = R.string.offline)})"
+    } else {
+        chat.displayName
+    }
+    DrawerItemHeader(stringResource(id = R.string.chat_header))
+    ChatItem(channelName, true, chat.getPhotoPainter(chatServer = chatServer)) {
+        onChatClicked()
+    }
+    DrawerItemHeader(stringResource(id = R.string.profile_header))
+    ProfileItem(
+        text = "${meProfile.displayName}(${stringResource(id = R.string.author_me)})",
+        profilePic = meProfile.getPhotoPainter(chatServer)
+    ) {
+        onProfileClicked(meProfile)
+    }
+    profiles.forEach {
+        if (it.displayId != meProfile.displayId) {
+            ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter(chatServer)) {
+                onProfileClicked(it)
+            }
+        }
     }
 }
 
@@ -84,6 +89,7 @@ private fun DrawerHeader() {
         )
     }
 }
+
 @Composable
 private fun DrawerItemHeader(text: String) {
     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
@@ -92,7 +98,12 @@ private fun DrawerItemHeader(text: String) {
 }
 
 @Composable
-private fun ChatItem(text: String, selected: Boolean, onChatClicked: () -> Unit) {
+private fun ChatItem(
+    text: String,
+    selected: Boolean,
+    chatPhoto: String?,
+    onChatClicked: () -> Unit
+) {
     val background = if (selected) {
         Modifier.background(MaterialTheme.colors.primary.copy(alpha = 0.08f))
     } else {
@@ -113,12 +124,41 @@ private fun ChatItem(text: String, selected: Boolean, onChatClicked: () -> Unit)
         } else {
             MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium)
         }
-        Icon(
-            painter = painterResource(id = R.drawable.ic_jetchat),
-            tint = iconTint,
-            modifier = Modifier.padding(8.dp),
-            contentDescription = null
-        )
+        if (chatPhoto == null) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_jetchat),
+                tint = iconTint,
+                modifier = Modifier.padding(8.dp),
+                contentDescription = null
+            )
+        } else {
+            LoadImage(
+                url = chatPhoto,
+                loading = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_loading),
+                        tint = iconTint,
+                        modifier = Modifier.padding(8.dp),
+                        contentDescription = null
+                    )
+                },
+                error = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_broken_cable),
+                        tint = iconTint,
+                        modifier = Modifier.padding(8.dp),
+                        contentDescription = null
+                    )
+                }
+            ) {
+                Icon(
+                    painter = it,
+                    tint = iconTint,
+                    modifier = Modifier.padding(8.dp),
+                    contentDescription = null
+                )
+            }
+        }
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
             Text(
                 text,
@@ -131,7 +171,7 @@ private fun ChatItem(text: String, selected: Boolean, onChatClicked: () -> Unit)
 }
 
 @Composable
-private fun ProfileItem(text: String, @DrawableRes profilePic: Int?, onProfileClicked: () -> Unit) {
+private fun ProfileItem(text: String, profilePic: String?, onProfileClicked: () -> Unit) {
     Row(
         modifier = Modifier
             .height(48.dp)
@@ -142,41 +182,76 @@ private fun ProfileItem(text: String, @DrawableRes profilePic: Int?, onProfileCl
         verticalAlignment = CenterVertically
     ) {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-            val widthPaddingModifier = Modifier.padding(8.dp).size(24.dp)
+            val widthPaddingModifier = Modifier
+                .padding(8.dp)
+                .size(24.dp)
             if (profilePic != null) {
+                LoadImage(
+                    url = profilePic,
+                    error = {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_broken_cable),
+                            modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
+                            contentScale = ContentScale.Crop,
+                            contentDescription = null
+                        )
+                    },
+                    loading = {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_loading),
+                            modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
+                            contentScale = ContentScale.Crop,
+                            contentDescription = null
+                        )
+                    }
+                ) {
+                    Image(
+                        painter = it,
+                        modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
+                        contentScale = ContentScale.Crop,
+                        contentDescription = null
+                    )
+                }
+            } else {
+//                Spacer(modifier = widthPaddingModifier)
                 Image(
-                    painter = painterResource(id = profilePic),
+                    painter = painterResource(id = R.drawable.ic_default_avatar_man),
                     modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
                     contentScale = ContentScale.Crop,
                     contentDescription = null
                 )
-            } else {
-                Spacer(modifier = widthPaddingModifier)
             }
             Text(text, style = MaterialTheme.typography.body2, modifier = Modifier.padding(8.dp))
         }
     }
 }
-
-@Composable
-@Preview
-fun DrawerPreview() {
-    JetchatTheme {
-        Surface {
-            Column {
-                JetchatDrawer({}, {})
-            }
-        }
-    }
-}
-@Composable
-@Preview
-fun DrawerPreviewDark() {
-    JetchatTheme(isDarkTheme = true) {
-        Surface {
-            Column {
-                JetchatDrawer({}, {})
-            }
-        }
-    }
-}
+//
+//@Composable
+//@Preview
+//fun DrawerPreview() {
+//    JetchatTheme {
+//        Surface {
+//            Column {
+//                JetchatDrawer(
+//                    {},
+//                    {},
+//                    chatData,
+//                    ChatAPI(""),
+//                    listOf(meProfile, colleagueProfile)
+//                )
+//            }
+//        }
+//    }
+//}
+//
+//@Composable
+//@Preview
+//fun DrawerPreviewDark() {
+//    JetchatTheme(isDarkTheme = true) {
+//        Surface {
+//            Column {
+//                JetchatDrawer({}, {}, chatData, ChatAPI(""), listOf(meProfile, colleagueProfile))
+//            }
+//        }
+//    }
+//}

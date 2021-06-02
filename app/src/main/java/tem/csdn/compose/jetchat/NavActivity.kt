@@ -1,31 +1,22 @@
-/*
- * Copyright 2020 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package tem.csdn.compose.jetchat
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material.rememberScaffoldState
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidViewBinding
 import androidx.core.os.bundleOf
 import androidx.core.view.WindowCompat
@@ -36,13 +27,18 @@ import tem.csdn.compose.jetchat.conversation.BackPressHandler
 import tem.csdn.compose.jetchat.conversation.LocalBackPressedDispatcher
 import tem.csdn.compose.jetchat.databinding.ContentMainBinding
 import com.google.accompanist.insets.ProvideWindowInsets
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import tem.csdn.compose.jetchat.chat.ChatViewModel
+import tem.csdn.compose.jetchat.theme.JetchatTheme
+import tem.csdn.compose.jetchat.theme.elevatedSurface
+
 
 /**
  * Main activity for the app.
  */
 class NavActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,50 +48,78 @@ class NavActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
-            // Provide WindowInsets to our content. We don't want to consume them, so that
-            // they keep being pass down the view hierarchy (since we're using fragments).
-            ProvideWindowInsets(consumeWindowInsets = false) {
-                CompositionLocalProvider(
-                    LocalBackPressedDispatcher provides this.onBackPressedDispatcher
-                ) {
-                    val scaffoldState = rememberScaffoldState()
-
-                    val drawerOpen by viewModel.drawerShouldBeOpened.collectAsState()
-                    if (drawerOpen) {
-                        // Open drawer and reset state in VM.
-                        LaunchedEffect(Unit) {
-                            scaffoldState.drawerState.open()
-                            viewModel.resetOpenDrawerAction()
-                        }
-                    }
-
-                    // Intercepts back navigation when the drawer is open
-                    val scope = rememberCoroutineScope()
-                    if (scaffoldState.drawerState.isOpen) {
-                        BackPressHandler {
-                            scope.launch {
-                                scaffoldState.drawerState.close()
-                            }
-                        }
-                    }
-
-                    JetchatScaffold(
-                        scaffoldState,
-                        onChatClicked = {
-                            findNavController().popBackStack(R.id.nav_home, true)
-                            scope.launch {
-                                scaffoldState.drawerState.close()
-                            }
-                        },
-                        onProfileClicked = {
-                            val bundle = bundleOf("userId" to it)
-                            findNavController().navigate(R.id.nav_profile, bundle)
-                            scope.launch {
-                                scaffoldState.drawerState.close()
-                            }
-                        }
+            val context = LocalContext.current
+            chatViewModel.initIfNeed(context)
+            val chatData by chatViewModel.chatData.observeAsState()
+            val meProfile by chatViewModel.meProfile.observeAsState()
+            val progress by chatViewModel.initProgress.observeAsState(initial = 0f)
+            val progressTextId by
+            chatViewModel.initProgressTextId.observeAsState(initial = R.string.init_app)
+            val profiles by chatViewModel.allProfiles.observeAsState(initial = emptyMap())
+            Log.d("CSDN_DEBUG", "(main)progress=${progress}")
+            if (progress < 1f || chatData == null) {
+                val animatedProgress by animateFloatAsState(
+                    targetValue = progress,
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+                )
+                JetchatTheme {
+                    Loading(animatedProgress, stringResource(id = progressTextId))
+                }
+            } else {
+                // Provide WindowInsets to our content. We don't want to consume them, so that
+                // they keep being pass down the view hierarchy (since we're using fragments).
+                ProvideWindowInsets(consumeWindowInsets = false) {
+                    CompositionLocalProvider(
+                        LocalBackPressedDispatcher provides this.onBackPressedDispatcher
                     ) {
-                        AndroidViewBinding(ContentMainBinding::inflate)
+                        val scaffoldState = rememberScaffoldState()
+
+                        val drawerOpen by viewModel.drawerShouldBeOpened.collectAsState()
+                        if (drawerOpen) {
+                            // Open drawer and reset state in VM.
+                            LaunchedEffect(Unit) {
+                                scaffoldState.drawerState.open()
+                                viewModel.resetOpenDrawerAction()
+                            }
+                        }
+
+                        // Intercepts back navigation when the drawer is open
+                        val scope = rememberCoroutineScope()
+                        if (scaffoldState.drawerState.isOpen) {
+                            BackPressHandler {
+                                scope.launch {
+                                    scaffoldState.drawerState.close()
+                                }
+                            }
+                        }
+
+                        val chatServer by chatViewModel.chatServer.observeAsState()
+                        val chatServerOnline by chatViewModel.webSocketStatus.observeAsState(false)
+                        Log.d("CSDN_CON", "main:chatServer=${chatServer}")
+                        JetchatScaffold(
+                            scaffoldState,
+                            onChatClicked = {
+                                findNavController().popBackStack(R.id.nav_home, true)
+                                scope.launch {
+                                    scaffoldState.drawerState.close()
+                                }
+                            },
+                            onProfileClicked = {
+                                val bundle =
+                                    bundleOf("profile" to it)
+                                findNavController().navigate(R.id.nav_profile, bundle)
+                                scope.launch {
+                                    scaffoldState.drawerState.close()
+                                }
+                            },
+                            chat = chatData!!,
+                            profiles = profiles.values,
+                            chatServer = chatServer!!,
+                            chatServerOffline = !chatServerOnline,
+                            meProfile = meProfile!!
+                        ) {
+                            AndroidViewBinding(ContentMainBinding::inflate)
+                        }
                     }
                 }
             }
@@ -113,5 +137,35 @@ class NavActivity : AppCompatActivity() {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         return navHostFragment.navController
+    }
+}
+
+@Preview
+@Composable
+fun LoadingPreview() {
+    JetchatTheme(isDarkTheme = true) {
+        Loading(progress = 0.5f, text = stringResource(id = R.string.wait_for_server_sync))
+    }
+}
+
+@Composable
+fun Loading(progress: Float, text: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CircularProgressIndicator(progress = progress)
+        Spacer(Modifier.requiredHeight(30.dp))
+        Text(
+            color = if (MaterialTheme.colors.isLight) {
+                Color.Unspecified
+            } else {
+                Color(0xFFDEDEDE)
+            },
+            text = text
+        )
     }
 }

@@ -1,19 +1,3 @@
-/*
- * Copyright 2020 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package tem.csdn.compose.jetchat.profile
 
 import android.content.Context
@@ -21,28 +5,39 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
 import tem.csdn.compose.jetchat.MainViewModel
 import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ViewWindowInsetObserver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import tem.csdn.compose.jetchat.R
+import tem.csdn.compose.jetchat.chat.ChatViewModel
+import tem.csdn.compose.jetchat.model.User
 
 class ProfileFragment : Fragment() {
-
-    private val viewModel: ProfileViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by activityViewModels()
+    private val viewModel: ProfileViewModel by activityViewModels()
     private val activityViewModel: MainViewModel by activityViewModels()
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
         // Consider using safe args plugin
-        val userId = arguments?.getString("userId")
-        viewModel.setUserId(userId)
+        val profile = arguments?.getSerializable("profile") as? User?
+        viewModel.setProfile(profile)
     }
 
     override fun onCreateView(
@@ -62,6 +57,11 @@ class ProfileFragment : Fragment() {
 
         setContent {
             val userData by viewModel.userData.observeAsState()
+            val chatServer by chatViewModel.chatServer.observeAsState()
+            val meProfile by chatViewModel.meProfile.observeAsState()
+            val context = LocalContext.current
+            val updateFailedText = stringResource(id = R.string.update_failed)
+            var editMode by mutableStateOf(false)
 
             CompositionLocalProvider(LocalWindowInsets provides windowInsets) {
                 JetchatTheme {
@@ -72,7 +72,33 @@ class ProfileFragment : Fragment() {
                             userData = userData!!,
                             onNavIconPressed = {
                                 activityViewModel.openDrawer()
-                            }
+                            },
+                            chatServer = chatServer!!,
+                            editMode = editMode,
+                            onEditSubmit = { user ->
+                                MainScope().launch(Dispatchers.IO) {
+                                    try {
+                                        val newUser = chatServer!!.updateProfile(user)
+                                        withContext(Dispatchers.Main) {
+                                            chatViewModel.updateProfile(newUser)
+                                            viewModel.setProfile(newUser)
+                                            editMode = false
+                                        }
+                                    } catch (e: Throwable) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                updateFailedText,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                }
+                            },
+                            onEditModeClick = {
+                                editMode = true
+                            },
+                            meProfile = meProfile!!
                         )
                     }
                 }

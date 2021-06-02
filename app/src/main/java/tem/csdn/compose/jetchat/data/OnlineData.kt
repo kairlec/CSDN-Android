@@ -1,0 +1,186 @@
+package tem.csdn.compose.jetchat.data
+
+import android.util.Log
+import androidx.compose.runtime.Composable
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.ktor.client.*
+import io.ktor.client.features.websocket.*
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.http.*
+import io.ktor.http.cio.websocket.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.sync.Mutex
+import tem.csdn.compose.jetchat.chat.ChatAPI
+import tem.csdn.compose.jetchat.model.Message
+import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.ReservableActor
+import tem.csdn.compose.jetchat.util.connectWebSocketToServer
+import tem.csdn.compose.jetchat.util.trySend
+import java.lang.Exception
+
+class ChatServerInitException(
+    val code: Int = -1,
+    override val message: String? = null,
+    override val cause: Throwable? = null
+) : Exception(message, cause)
+
+class ChatServer(
+    val chatAPI: ChatAPI,
+    val id: String,
+    private val client: HttpClient,
+    private val lastMessageId: Long?,
+    coroutineScope: CoroutineScope,
+    val onWebSocketEvent: suspend (Boolean) -> Unit
+) {
+    companion object {
+        lateinit var current: ChatServer
+            private set
+            @get:Composable
+            get
+    }
+
+    val objectMapper = jacksonObjectMapper()
+
+    // 这个锁用来保持WebSocket不会被关闭,防止提前关闭输出导致需要重新连接
+    private val webSocketKeepAliveMutex = Mutex()
+    private val inputReservableActor by lazy {
+        ReservableActor<RawWebSocketFrameWrapper<*>>(
+            coroutineScope = coroutineScope,
+            context = Dispatchers.IO,
+            capacity = Channel.UNLIMITED,
+            start = CoroutineStart.LAZY
+        )
+    }
+    val outputChannel by lazy { Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED) }
+
+    suspend fun updateProfile(user: User): User {
+        return client.post<Result<User>>(chatAPI.profile()) {
+            body = FormDataContent(Parameters.build {
+                append("name", user.name)
+                append("displayName", user.displayName)
+                append("position", user.position)
+                append("github", user.github ?: "")
+                append("qq", user.qq ?: "")
+                append("weChat", user.weChat ?: "")
+            })
+        }.checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "update profile:${this}")
+        }
+    }
+
+    suspend fun getMeProfile(): User {
+        return client.post<Result<User>>(chatAPI.init(id)).checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for me profile:${this}")
+        }
+    }
+
+    suspend fun getChatDisplayName(): String {
+        return client.get<Result<String>>(chatAPI.chatName()).checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for chat display name:${this}")
+        }
+    }
+
+    suspend fun getProfiles(): List<User> {
+        return client.get<Result<List<User>>>(chatAPI.profiles()).checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for profiles:${this}")
+        }
+    }
+
+    suspend fun getOnlineNumber(): Int {
+        return client.get<Result<Int>>(chatAPI.count()).checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for count:${this}")
+        }
+    }
+
+    suspend fun getMessages(): List<Message> {
+        return client.get<Result<List<Message>>>(chatAPI.messages()) {
+            if (lastMessageId != null) {
+                parameter("after_id", lastMessageId)
+            }
+        }.checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "init for messages:${this}")
+        }
+    }
+
+    suspend fun connect(
+        onConnect: suspend DefaultClientWebSocketSession.() -> Unit,
+        onDisconnect: suspend () -> Unit
+    ) {
+        if (webSocketKeepAliveMutex.isLocked) {
+            webSocketKeepAliveMutex.unlock()
+        }
+        connectWebSocketToServer(
+            ssl = chatAPI.ssl,
+            host = chatAPI.host,
+            port = chatAPI.port,
+            path = chatAPI.webSocket(id),
+            objectMapper = objectMapper,
+            webSocketKeepAliveMutex = webSocketKeepAliveMutex,
+            outputMessageChannel = outputChannel,
+            onConnected = { wsSession ->
+                Log.d(
+                    "CSDN_DEBUG",
+                    "locked to keep alive, redirect to send handler and send error handler"
+                )
+                if (!webSocketKeepAliveMutex.isLocked) {
+                    webSocketKeepAliveMutex.lock()
+                }
+                inputReservableActor.invokeOnReceive {
+                    wsSession.trySend(objectMapper, it) { throwable ->
+                        this.cause = throwable
+                        this.throwToErrorHandler = true
+                        it.ifTextWrapper(objectMapper) {
+                            if (it.type == TextWebSocketFrameWrapper.FrameType.HEARTBEAT || it.type == TextWebSocketFrameWrapper.FrameType.HEARTBEAT_ACK) {
+                                this.hold = false
+                            }
+                        }
+                    }
+                }
+                inputReservableActor.invokeOnReceiveError {
+                    if (webSocketKeepAliveMutex.isLocked) {
+                        webSocketKeepAliveMutex.unlock()
+                    }
+                    wsSession.close()
+                }
+                Log.d("CSDN_DEBUG", "start input listen")
+                inputReservableActor.startAll()
+                onWebSocketEvent(true)
+                onConnect(wsSession)
+            },
+            onDisconnected = {
+                Log.d("CSDN_DEBUG", "disconnect,pause receive Handelr")
+                inputReservableActor.pauseReceiveHandler()
+                onWebSocketEvent(false)
+                onDisconnect()
+            }
+        )
+        Log.d("CSDN_DEBUG", "init for websocket")
+    }
+
+    suspend fun send(rawWebSocketFrameWrapper: RawWebSocketFrameWrapper<*>) {
+        inputReservableActor.send(rawWebSocketFrameWrapper)
+    }
+
+
+    init {
+        current = this
+    }
+}
+
+class Result<T>(
+    val code: Int = 0,
+    val msg: String? = null,
+    val data: T? = null
+) {
+    override fun toString(): String {
+        return "Result(code=$code, msg=$msg, data=$data)"
+    }
+
+    fun checked() = apply {
+        if (code != 0) {
+            throw ChatServerInitException(code, msg)
+        }
+    }
+}

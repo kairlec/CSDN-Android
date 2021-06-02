@@ -1,24 +1,9 @@
-/*
- * Copyright 2020 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import tem.csdn.compose.jetchat.buildsrc.Libs
 
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id "org.jetbrains.kotlin.kapt"
 }
 
 android {
@@ -26,13 +11,16 @@ android {
 
     defaultConfig {
         applicationId "tem.csdn.compose.jetchat"
-        minSdkVersion 21
+        minSdkVersion 26
         targetSdkVersion 30
         versionCode 1
         versionName '1.0'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
         vectorDrawables.useSupportLibrary = true
+        ndk {
+            abiFilters 'armeabi'//, 'x86', 'armeabi-v7a', 'arm64-v8a'
+        }
     }
 
     signingConfigs {
@@ -47,10 +35,12 @@ android {
 
     buildTypes {
         debug {
+            debuggable true
             signingConfig signingConfigs.debug
         }
 
         release {
+            debuggable true
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
@@ -89,13 +79,31 @@ android {
 }
 
 dependencies {
+//    implementation Libs.Landscapist.fresco
+
+    implementation Libs.disklrucache
+    implementation Libs.tiny
+
+    implementation Libs.Ktor.serialization
+    implementation Libs.Ktor.android
+    implementation Libs.Ktor.logging
+    implementation Libs.Ktor.cio
+    //implementation Libs.Ktor.okhttp
+    //implementation Libs.Ktor.okhttp_interceptor
+    implementation Libs.Ktor.websockets
+    implementation Libs.Ktor.jackson
+
+    implementation Libs.Kotlin.reflect
     implementation Libs.Kotlin.stdlib
+    implementation Libs.Kotlin.stdlib_jdk8
+    implementation Libs.Kotlin.common
     implementation Libs.Coroutines.android
 
-
+    implementation Libs.AndroidX.Ads.identifier
     implementation Libs.AndroidX.Activity.activityCompose
     implementation Libs.AndroidX.coreKtx
     implementation Libs.AndroidX.appcompat
+    implementation Libs.AndroidX.startup
     implementation Libs.AndroidX.Lifecycle.livedata
     implementation Libs.AndroidX.Lifecycle.viewModelCompose
     implementation Libs.AndroidX.Navigation.fragment
@@ -112,6 +120,13 @@ dependencies {
     implementation Libs.AndroidX.Compose.viewBinding
 
     implementation Libs.Accompanist.insets
+//    implementation Libs.Accompanist.glide
+    //implementation Libs.Accompanist.glide_okhttp3
+
+    implementation Libs.AndroidX.Room.runtime
+    implementation Libs.AndroidX.Room.ktx
+    implementation Libs.AndroidX.Room.testing
+    kapt Libs.AndroidX.Room.kapt
 
     androidTestImplementation Libs.junit
     androidTestImplementation Libs.AndroidX.Test.core
