@@ -63,6 +63,7 @@ import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.data.RawWebSocketFrameWrapper
+import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.theme.JetchatTheme
@@ -85,7 +86,7 @@ fun ConversationContent(
     chatData: ChatDataScreenState,
     chatServerOffline: Boolean,
     onlineMembers: Int,
-    messages: List<Message>,
+    messages: List<LocalMessage>,
     navigateToProfile: (User) -> Unit,
     getProfile: (String) -> User?,
     modifier: Modifier = Modifier,
@@ -211,7 +212,7 @@ const val ConversationTestTag = "ConversationTestTag"
 
 @Composable
 fun Messages(
-    messages: List<Message>,
+    messages: List<LocalMessage>,
     navigateToProfile: (User) -> Unit,
     scrollState: LazyListState,
     modifier: Modifier = Modifier,
@@ -246,10 +247,8 @@ fun Messages(
                 val prevMessage = messages.getOrNull(index - 1)
                 val nextMessage = messages.getOrNull(index + 1)
                 val content = messages[index]
-                val prevAuthor = prevMessage?.author
-                val nextAuthor = nextMessage?.author
-                val isFirstMessageByAuthor = prevAuthor != content.author
-                val isLastMessageByAuthor = nextAuthor != content.author
+                val isFirstMessageByAuthor = prevMessage?.authorDisplayId != content.authorDisplayId
+                val isLastMessageByAuthor = nextMessage?.authorDisplayId != content.authorDisplayId
 
                 // Hardcode day dividers for simplicity
                 val msgTime =
@@ -312,7 +311,7 @@ fun Messages(
                     Message(
                         onAuthorClick = { displayId -> navigateToProfile(displayId) },
                         msg = content,
-                        isUserMe = content.author.displayId == meProfile.displayId,
+                        isUserMe = content.authorDisplayId == meProfile.displayId,
                         isFirstMessageByAuthor = isFirstMessageByAuthor,
                         isLastMessageByAuthor = isLastMessageByAuthor,
                         msgTimeString = msgTimeString,
@@ -324,7 +323,7 @@ fun Messages(
                 if (nextMessage == null) {
                     draw()
                 } else {
-                    if (nextDraw && nextMessage.author.displayId != content.author.displayId) {
+                    if (nextDraw && nextMessage.authorDisplayId != content.authorDisplayId) {
                         draw()
                         nextDraw = false
                     } else {
@@ -335,7 +334,7 @@ fun Messages(
                                 OffsetDateTime.now().offset
                             )
                         if (nextMsgTime.toLocalDate() != msgTime.toLocalDate()) {
-                            if (nextMessage.author.displayId == content.author.displayId) {
+                            if (nextMessage.authorDisplayId == content.authorDisplayId) {
                                 nextDraw = true
                             } else {
                                 draw()
@@ -378,7 +377,7 @@ fun Message(
     onAuthorClick: (User) -> Unit,
     painterClicked: (Painter) -> Unit,
     getProfile: (String) -> User?,
-    msg: Message,
+    msg: LocalMessage,
     isUserMe: Boolean,
     isFirstMessageByAuthor: Boolean,
     isLastMessageByAuthor: Boolean,
@@ -390,18 +389,19 @@ fun Message(
     } else {
         MaterialTheme.colors.secondary
     }
+    val author = getProfile(msg.authorDisplayId)!!
 
     @Composable
     fun Photo() {
         if (isLastMessageByAuthor) {
             // Avatar
-            msg.author.getPhotoPainter(chatServer)?.let {
+            author.getPhotoPainter(chatServer)?.let {
                 LoadImage(
                     url = it,
                     error = {
                         Image(
                             modifier = Modifier
-                                .clickable(onClick = { onAuthorClick(msg.author) })
+                                .clickable(onClick = { onAuthorClick(author) })
                                 .padding(horizontal = 16.dp)
                                 .size(42.dp)
                                 .border(1.5.dp, borderColor, CircleShape)
@@ -415,7 +415,7 @@ fun Message(
                     loading = {
                         Image(
                             modifier = Modifier
-                                .clickable(onClick = { onAuthorClick(msg.author) })
+                                .clickable(onClick = { onAuthorClick(author) })
                                 .padding(horizontal = 16.dp)
                                 .size(42.dp)
                                 .border(1.5.dp, borderColor, CircleShape)
@@ -429,7 +429,7 @@ fun Message(
                 ) {
                     Image(
                         modifier = Modifier
-                            .clickable(onClick = { onAuthorClick(msg.author) })
+                            .clickable(onClick = { onAuthorClick(author) })
                             .padding(horizontal = 16.dp)
                             .size(42.dp)
                             .border(1.5.dp, borderColor, CircleShape)
@@ -443,7 +443,7 @@ fun Message(
             } ?: run {
                 Image(
                     modifier = Modifier
-                        .clickable(onClick = { onAuthorClick(msg.author) })
+                        .clickable(onClick = { onAuthorClick(author) })
                         .padding(horizontal = 16.dp)
                         .size(42.dp)
                         .border(1.5.dp, borderColor, CircleShape)
@@ -464,6 +464,7 @@ fun Message(
     fun AuthorAndTextMessage(modifier: Modifier) {
         AuthorAndTextMessage(
             msg = msg,
+            author = author,
             isUserMe = isUserMe,
             chatServer = chatServer,
             isFirstMessageByAuthor = isFirstMessageByAuthor,
@@ -498,7 +499,8 @@ fun Message(
 
 @Composable
 fun AuthorAndTextMessage(
-    msg: Message,
+    msg: LocalMessage,
+    author: User,
     isUserMe: Boolean,
     chatServer: ChatServer,
     isFirstMessageByAuthor: Boolean,
@@ -512,7 +514,7 @@ fun AuthorAndTextMessage(
     @Composable
     fun Content() {
         if (isLastMessageByAuthor) {
-            AuthorNameTimestamp(msg, isUserMe, msgTimeString)
+            AuthorNameTimestamp(author, isUserMe, msgTimeString)
         }
         ChatItemBubble(
             msg,
@@ -548,7 +550,11 @@ fun AuthorAndTextMessage(
 }
 
 @Composable
-private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: String) {
+private fun AuthorNameTimestamp(
+    author: User,
+    isUserMe: Boolean,
+    msgTimeString: String
+) {
     // Combine author and timestamp for a11y.
     @Composable
     fun RowScope.TimeString() {
@@ -581,7 +587,7 @@ private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: 
             //AuthorName("${msg.author.displayName}(${stringResource(id = R.string.author_me)})")
             AuthorName(stringResource(id = R.string.author_me))
         } else {
-            AuthorName(msg.author.displayName)
+            AuthorName(author.displayName)
             Spacer(modifier = Modifier.width(8.dp))
             TimeString()
         }
@@ -624,7 +630,7 @@ private fun RowScope.DayHeaderLine() {
 
 @Composable
 fun ChatItemBubble(
-    message: Message,
+    message: LocalMessage,
     chatServer: ChatServer,
     lastMessageByAuthor: Boolean,
     getProfile: (String) -> User?,
@@ -717,7 +723,7 @@ fun ChatItemBubble(
 
 @Composable
 fun ClickableMessage(
-    message: Message,
+    message: LocalMessage,
     getProfile: (String) -> User?,
     authorClicked: (User) -> Unit
 ) {
@@ -753,6 +759,8 @@ fun ConversationPreview() {
     }
     val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
     val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    val allProfiles =
+        mapOf(meProfile.displayId to meProfile, otherProfile.displayId to otherProfile)
     val messages =
         listOf(
             Message(1, "卧槽", (System.currentTimeMillis() / 1000).toInt(), null, meProfile),
@@ -777,7 +785,7 @@ fun ConversationPreview() {
                 null,
                 otherProfile
             )
-        )
+        ).map { it.toLocal() }
     JetchatTheme(isDarkTheme = true) {
         val coroutineScope = rememberCoroutineScope()
         ConversationContent(
@@ -786,7 +794,7 @@ fun ConversationPreview() {
             onlineMembers = 2,
             messages = messages,
             navigateToProfile = { },
-            getProfile = { meProfile },
+            getProfile = { allProfiles[it] },
             chatServer = ChatServer(
                 ChatAPI(false, "120.77.179.218", 18080),
                 "uuid",

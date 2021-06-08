@@ -41,7 +41,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.components.FullScreenDialog
 import tem.csdn.compose.jetchat.data.ChatServer
@@ -95,12 +94,12 @@ class ConversationFragment : Fragment() {
             val messages by chatViewModel.allMessages.observeAsState(emptyList())
             val onlineMembers by chatViewModel.onlineMembers.observeAsState(0)
             val online by chatViewModel.webSocketStatus.observeAsState(false)
+            val allProfiles by chatViewModel.allProfiles.observeAsState()
             Log.d("CSDN_CON", "chatData=${chatData}")
             Log.d("CSDN_CON", "chatServer=${chatServer}")
             Log.d("CSDN_CON", "meProfile=${meProfile}")
             Log.d("CSDN_CON", "messages=${messages}")
             Log.d("CSDN_CON", "onlineMembers=${onlineMembers}")
-
 
             var uploadError by remember {
                 mutableStateOf<Pair<Int, String?>?>(null)
@@ -272,7 +271,7 @@ class ConversationFragment : Fragment() {
                             modifier = Modifier.navigationBarsPadding(bottom = false),
                             chatServer = chatServer!!,
                             getProfile = {
-                                chatViewModel.userDao.getByDisplayId(it)
+                                allProfiles?.get(it)?:chatViewModel.userDao.getByDisplayId(it)
                             },
                             meProfile = meProfile!!,
                             chatServerOffline = !online,

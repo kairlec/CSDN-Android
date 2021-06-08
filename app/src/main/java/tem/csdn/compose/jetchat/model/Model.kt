@@ -65,6 +65,15 @@ data class LocalMessage(
     fun toNonLocal(users: Map<String, User>): Message {
         return Message(id, content, timestamp, image, users[authorDisplayId]!!)
     }
+
+    @Composable
+    fun getImagePainter(chatServer: ChatServer): String? {
+        return if (image != null) {
+            chatServer.chatAPI.image(image)
+        } else {
+            null
+        }
+    }
 }
 
 data class UserAndMessage(
