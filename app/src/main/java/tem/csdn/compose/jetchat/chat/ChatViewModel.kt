@@ -244,7 +244,7 @@ class ChatViewModel : ViewModel() {
                     try {
                         rawWebSocketFrameWrapper.ifTextWrapper(chatServer.objectMapper) {
                             when (it.type) {
-                                TextWebSocketFrameWrapper.FrameType.MESSAGE -> {
+                                TextWebSocketFrameWrapper.FrameType.TEXT_MESSAGE -> {
                                     val msg =
                                         chatServer.objectMapper.convertValue<Message>(it.content!!)
                                     Log.d("CSDN_DEBUG_RECEIVE", "new msg:${msg}")
@@ -263,6 +263,15 @@ class ChatViewModel : ViewModel() {
                                         if (user.displayId != meProfile.displayId) {
                                             _onlineMembers.value = _onlineMembers.value!! + 1
                                         }
+                                    }
+                                }
+                                TextWebSocketFrameWrapper.FrameType.UPDATE_USER -> {
+                                    val user =
+                                        chatServer.objectMapper.convertValue<User>(it.content!!)
+                                    Log.d("CSDN_DEBUG_RECEIVE", "new update event:${user}")
+                                    userDao.update(user)
+                                    withContext(Dispatchers.Main) {
+                                        _allProfiles.value?.set(user.displayId, user)
                                     }
                                 }
                                 TextWebSocketFrameWrapper.FrameType.NEW_DISCONNECTION -> {
@@ -347,6 +356,6 @@ data class ChatDataScreenState(
 ) {
     @Composable
     fun getPhotoPainter(chatServer: ChatServer): String {
-        return chatServer.chatAPI.image(ChatAPI.ImageType.CHAT, "0")
+        return chatServer.chatAPI.image("0")
     }
 }

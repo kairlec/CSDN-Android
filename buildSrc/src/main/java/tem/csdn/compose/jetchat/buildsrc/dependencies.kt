@@ -15,20 +15,13 @@ object Libs {
 
     const val tiny = "com.zxy.android:tiny:1.1.0"
 
-    object Landscapist{
-        private const val version = "1.2.2"
-        const val fresco = "com.github.skydoves:landscapist-fresco:$version"
-    }
-
     object Accompanist {
-        private const val version = "0.10.0"
+        private const val version = "0.11.0"
         const val insets = "com.google.accompanist:accompanist-insets:$version"
-        const val glide = "com.google.accompanist:accompanist-glide:$version"
-        const val glide_okhttp3 = "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     }
 
     object Kotlin {
-        private const val version = "1.4.32"
+        private const val version = "1.5.10"
         const val stdlib_jdk8 = "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$version"
         const val gradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:$version"
         const val extensions = "org.jetbrains.kotlin:kotlin-android-extensions:$version"
@@ -38,20 +31,13 @@ object Libs {
     }
 
     object Ktor {
-        private const val version = "1.5.4"
+        private const val version = "1.6.0"
         const val android = "io.ktor:ktor-client-android:$version"
         const val serialization = "io.ktor:ktor-client-serialization:$version"
         const val logging = "io.ktor:ktor-client-logging-jvm:$version"
         const val cio = "io.ktor:ktor-client-cio:$version"
-        const val okhttp = "io.ktor:ktor-client-okhttp:$version"
-        const val okhttp_interceptor ="com.squareup.okhttp3:logging-interceptor:4.6.0"
         const val jackson = "io.ktor:ktor-client-jackson:$version"
         const val websockets = "io.ktor:ktor-client-websockets:$version"
-    }
-
-    object KotlinX {
-        private const val version = "1.2.1"
-        const val serialization = "org.jetbrains.kotlinx:kotlinx-serialization-json:$version"
     }
 
     object Coroutines {
@@ -63,16 +49,16 @@ object Libs {
 
     object AndroidX {
         const val appcompat = "androidx.appcompat:appcompat:1.3.0"
-        const val coreKtx = "androidx.core:core-ktx:1.6.0-alpha03"
+        const val coreKtx = "androidx.core:core-ktx:1.6.0-beta02"
         const val startup = "androidx.startup:startup-runtime:1.1.0-alpha01"
 
         object Activity {
-            const val activityCompose = "androidx.activity:activity-compose:1.3.0-alpha08"
+            const val activityCompose = "androidx.activity:activity-compose:1.3.0-beta01"
         }
 
         object Compose {
             const val snapshot = ""
-            const val version = "1.0.0-beta07"
+            const val version = "1.0.0-beta08"
 
             const val foundation = "androidx.compose.foundation:foundation:$version"
             const val layout = "androidx.compose.foundation:foundation-layout:$version"
@@ -113,7 +99,7 @@ object Libs {
             const val livedata = "androidx.lifecycle:lifecycle-livedata-ktx:$version"
             const val viewmodel = "androidx.lifecycle:lifecycle-viewmodel-ktx:$version"
             const val viewModelCompose =
-                "androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha05"
+                "androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha06"
         }
 
         object Ads {

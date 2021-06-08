@@ -1,7 +1,6 @@
 package tem.csdn.compose.jetchat.data
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.readValue
 
 data class RawWebSocketFrameWrapper<T : Any> private constructor(
@@ -11,12 +10,17 @@ data class RawWebSocketFrameWrapper<T : Any> private constructor(
     enum class RawFrameType {
         TEXT,
         BINARY,
+        IMAGE_TEXT,
         TEXT_WRAPPER,
     }
 
     companion object {
         fun ofBinary(content: ByteArray): RawWebSocketFrameWrapper<ByteArray> {
             return RawWebSocketFrameWrapper(RawFrameType.BINARY, content)
+        }
+
+        fun ofImageText(content: String): RawWebSocketFrameWrapper<String> {
+            return RawWebSocketFrameWrapper(RawFrameType.IMAGE_TEXT, content)
         }
 
         fun ofText(content: String): RawWebSocketFrameWrapper<String> {
@@ -39,6 +43,14 @@ suspend fun RawWebSocketFrameWrapper<*>.ifRawText(
     event: suspend (String) -> Unit
 ) {
     if (type == RawWebSocketFrameWrapper.RawFrameType.TEXT) {
+        event(textContent)
+    }
+}
+
+suspend fun RawWebSocketFrameWrapper<*>.ifImageText(
+    event: suspend (String) -> Unit
+) {
+    if (type == RawWebSocketFrameWrapper.RawFrameType.IMAGE_TEXT) {
         event(textContent)
     }
 }
@@ -70,8 +82,14 @@ data class TextWebSocketFrameWrapper private constructor(
     val content: Any?
 ) {
     enum class FrameType {
-        // 消息体
-        MESSAGE,
+        //用户更新消息(客户端仅接受,服务端仅发送)
+        UPDATE_USER,
+
+        // 图片消息体(客户端仅发送,服务端仅接受)
+        IMAGE_MESSAGE,
+
+        // 文本消息体
+        TEXT_MESSAGE,
 
         // 新的连接消息
         NEW_CONNECTION,
@@ -91,7 +109,11 @@ data class TextWebSocketFrameWrapper private constructor(
 
     companion object {
         fun ofMessage(content: String): TextWebSocketFrameWrapper {
-            return TextWebSocketFrameWrapper(FrameType.MESSAGE, content)
+            return TextWebSocketFrameWrapper(FrameType.TEXT_MESSAGE, content)
+        }
+
+        fun ofImageMessage(content: String): TextWebSocketFrameWrapper {
+            return TextWebSocketFrameWrapper(FrameType.IMAGE_MESSAGE, content)
         }
 
         fun ofHeartbeat(content: String): TextWebSocketFrameWrapper {

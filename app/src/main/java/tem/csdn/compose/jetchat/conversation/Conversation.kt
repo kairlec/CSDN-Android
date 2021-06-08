@@ -233,7 +233,8 @@ fun Messages(
             // Add content padding so that the content can be scrolled (y-axis)
             // below the status bar + app bar
             // TODO: Get height from somewhere
-            contentPadding = LocalWindowInsets.current.statusBars.toPaddingValues(
+            contentPadding = rememberInsetsPaddingValues(
+                insets = LocalWindowInsets.current.statusBars,
                 additionalTop = 90.dp
             ),
             modifier = Modifier
@@ -660,7 +661,7 @@ fun ChatItemBubble(
         }
     }
     Column {
-        if (message.image == true) {
+        if (message.image != null) {
             message.getImagePainter(chatServer)?.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(
@@ -754,26 +755,26 @@ fun ConversationPreview() {
     val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
     val messages =
         listOf(
-            Message(1, "卧槽", (System.currentTimeMillis() / 1000).toInt(), false, meProfile),
+            Message(1, "卧槽", (System.currentTimeMillis() / 1000).toInt(), null, meProfile),
             Message(
                 2,
                 "长消息卧槽",
                 (System.currentTimeMillis() / 1000 + 120).toInt(),
-                false,
+                null,
                 meProfile
             ),
             Message(
                 3,
                 "卧槽O",
                 (System.currentTimeMillis() / 1000 + 240).toInt(),
-                false,
+                null,
                 otherProfile
             ),
             Message(
                 4,
                 "长消息卧槽O",
                 (System.currentTimeMillis() / 1000 + 360).toInt(),
-                false,
+                null,
                 otherProfile
             )
         )
