@@ -3,6 +3,7 @@ package tem.csdn.compose.jetchat.util
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ActorScope
+import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.selects.SelectClause2
@@ -176,16 +177,8 @@ class ReservableActor<T>(
         listenJob = genJob(start)
     }
 
-    override fun offer(element: T): Boolean {
-        return sendChannel.offer(element)
+    override fun trySend(element: T): ChannelResult<Unit> {
+        return sendChannel.trySend(element)
     }
-
-    @ExperimentalCoroutinesApi
-    override val isFull: Boolean
-        @Suppress("OverridingDeprecatedMember")
-        get() {
-            @Suppress("DEPRECATION_ERROR")
-            return sendChannel.isFull
-        }
 
 }

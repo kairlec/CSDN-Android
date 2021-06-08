@@ -15,14 +15,12 @@ class ChatAPI(val ssl: Boolean, val host: String, val port: Int? = null) : Seria
         private const val serialVersionUID = 13546100697343249L
     }
 
-    enum class ImageType(val method: String) {
-        PHOTO("photo"),
-        IMAGE("image"),
-        CHAT("chat"),
+    fun image(sha256: String): String {
+        return "${baseUrl}/image/${sha256}"
     }
 
-    fun image(imageType: ImageType, id: String): String {
-        return "${baseUrl}/img/${imageType.method}/${id}"
+    fun upc(sha256: String): String {
+        return "${baseUrl}/upc/${sha256}"
     }
 
     fun profilePhoto(): String {

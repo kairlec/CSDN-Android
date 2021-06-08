@@ -45,6 +45,7 @@ fun ProfileScreen(
     chatServer: ChatServer?,
     editMode: Boolean = false,
     onEditSubmit: (User) -> Unit,
+    onAvatarClick: () -> Unit,
     onEditModeClick: () -> Unit,
     onNavIconPressed: () -> Unit = { }
 ) {
@@ -90,7 +91,8 @@ fun ProfileScreen(
                             scrollState,
                             userData,
                             this@BoxWithConstraints.maxHeight,
-                            chatServer
+                            chatServer,
+                            onAvatarClick
                         )
                     }
                     if (!editMode) {
@@ -366,18 +368,22 @@ private fun ProfileHeader(
     data: User,
     containerHeight: Dp,
     chatServer: ChatServer,
+    onAvatarClick: () -> Unit
 ) {
     val offset = (scrollState.value / 2)
     val offsetDp = with(LocalDensity.current) { offset.toDp() }
-
+    val modifier = Modifier
+        .heightIn(max = containerHeight / 2)
+        .fillMaxWidth()
+        .padding(top = offsetDp)
+        .clickable {
+            onAvatarClick()
+        }
     data.getPhotoPainter(chatServer)?.let {
         LoadImage(url = it,
             error = {
                 Image(
-                    modifier = Modifier
-                        .heightIn(max = containerHeight / 2)
-                        .fillMaxWidth()
-                        .padding(top = offsetDp),
+                    modifier = modifier,
                     painter = painterResource(id = R.drawable.ic_broken_cable),
                     contentScale = ContentScale.Crop,
                     contentDescription = null
@@ -385,20 +391,14 @@ private fun ProfileHeader(
             },
             loading = {
                 Image(
-                    modifier = Modifier
-                        .heightIn(max = containerHeight / 2)
-                        .fillMaxWidth()
-                        .padding(top = offsetDp),
+                    modifier = modifier,
                     painter = painterResource(id = R.drawable.ic_loading),
                     contentScale = ContentScale.Crop,
                     contentDescription = null
                 )
             }) {
             Image(
-                modifier = Modifier
-                    .heightIn(max = containerHeight / 2)
-                    .fillMaxWidth()
-                    .padding(top = offsetDp),
+                modifier = modifier,
                 painter = it,
                 contentScale = ContentScale.Crop,
                 contentDescription = null
@@ -406,10 +406,7 @@ private fun ProfileHeader(
         }
     } ?: run {
         Image(
-            modifier = Modifier
-                .heightIn(max = containerHeight / 2)
-                .fillMaxWidth()
-                .padding(top = offsetDp),
+            modifier = modifier,
             painter = painterResource(id = R.drawable.ic_default_avatar_man),
             contentScale = ContentScale.Crop,
             contentDescription = null

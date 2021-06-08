@@ -124,6 +124,17 @@ suspend fun DefaultClientWebSocketSession.trySend(
             )
         )
     }
+    rawWebSocketFrameWrapper.ifImageText {
+        error = sendRetry(
+            Frame.Text(
+                objectMapper.writeValueAsString(
+                    TextWebSocketFrameWrapper.ofImageMessage(
+                        it
+                    )
+                )
+            )
+        )
+    }
     rawWebSocketFrameWrapper.ifTextWrapper(objectMapper) {
         error = sendRetry(
             Frame.Text(

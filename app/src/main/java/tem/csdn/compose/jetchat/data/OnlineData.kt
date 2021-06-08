@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Mutex
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.MultiPartContent
 import tem.csdn.compose.jetchat.util.ReservableActor
 import tem.csdn.compose.jetchat.util.connectWebSocketToServer
 import tem.csdn.compose.jetchat.util.trySend
@@ -55,6 +56,11 @@ class ChatServer(
     }
     val outputChannel by lazy { Channel<RawWebSocketFrameWrapper<*>>(Channel.UNLIMITED) }
 
+    suspend fun updateImageCheck(checkUrl: String): Boolean {
+        val result = client.get<Result<Boolean>>(checkUrl).checked()
+        return result.data == true
+    }
+
     suspend fun updateProfile(user: User): User {
         return client.post<Result<User>>(chatAPI.profile()) {
             body = FormDataContent(Parameters.build {
@@ -65,6 +71,18 @@ class ChatServer(
                 append("qq", user.qq ?: "")
                 append("weChat", user.weChat ?: "")
             })
+        }.checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "update profile:${this}")
+        }
+    }
+
+    suspend fun updateProfilePhoto(byteArray: ByteArray, filename: String? = null): User {
+        return client.submitFormWithBinaryData<Result<User>> {
+            url(chatAPI.profilePhoto())
+            method = HttpMethod.Post
+            body = MultiPartContent.build {
+                add("avatar", byteArray, filename = filename)
+            }
         }.checked().data!!.apply {
             Log.d("CSDN_DEBUG", "update profile:${this}")
         }

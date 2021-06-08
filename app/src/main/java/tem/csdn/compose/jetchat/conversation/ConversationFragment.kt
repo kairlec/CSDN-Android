@@ -1,8 +1,6 @@
 package tem.csdn.compose.jetchat.conversation
 
-import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,10 +8,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.view.WindowInsets
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -41,18 +37,16 @@ import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ViewWindowInsetObserver
 import com.google.accompanist.insets.navigationBarsPadding
 import com.zxy.tiny.Tiny
-import com.zxy.tiny.callback.FileCallback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.components.FullScreenDialog
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.data.RawWebSocketFrameWrapper
-import tem.csdn.compose.jetchat.util.addSystemUIVisibilityListener
-import tem.csdn.compose.jetchat.util.hideSystemUI
-import tem.csdn.compose.jetchat.util.showSystemUI
+import tem.csdn.compose.jetchat.util.sha256
 import java.io.File
 
 class ConversationFragment : Fragment() {
@@ -108,77 +102,115 @@ class ConversationFragment : Fragment() {
             Log.d("CSDN_CON", "onlineMembers=${onlineMembers}")
 
 
-            val uploadError = remember {
+            var uploadError by remember {
                 mutableStateOf<Pair<Int, String?>?>(null)
             }
+            var uploadErrorShow by remember {
+                mutableStateOf(false)
+            }
+            var retryEvent: (() -> Unit)? = null
 
             val launcher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()
             ) { uri: Uri? ->
                 if (uri != null) {
-                    MainScope().launch(Dispatchers.IO) {
-                        try {
-                            context.contentResolver.openInputStream(uri)?.use {
-                                it.readBytes()
-                            }?.let {
-                                val options: Tiny.FileCompressOptions =
-                                    Tiny.FileCompressOptions().apply {
-                                        size = 200f
-                                    }
-                                Tiny.getInstance().source(it).asFile().withOptions(options)
-                                    .compress { isSuccess, outfile, t ->
-                                        Log.d("CSDN_DEBUG_TINY", "outfile=${outfile}")
-                                        if (!isSuccess) {
-                                            if (t != null) {
-                                                MainScope().launch(Dispatchers.Main) {
-                                                    uploadError.value =
-                                                        R.string.image_upload_failed to t.localizedMessage
+                    retryEvent = {
+                        MainScope().launch(Dispatchers.IO) {
+                            try {
+                                context.contentResolver.openInputStream(uri)?.use {
+                                    it.readBytes()
+                                }?.let {
+                                    val options: Tiny.FileCompressOptions =
+                                        Tiny.FileCompressOptions().apply {
+                                            size = 200f
+                                        }
+                                    Tiny.getInstance().source(it).asFile().withOptions(options)
+                                        .compress { isSuccess, outfile, t ->
+                                            Log.d("CSDN_DEBUG_TINY", "outfile=${outfile}")
+                                            if (!isSuccess) {
+                                                if (t != null) {
+                                                    MainScope().launch(Dispatchers.Main) {
+                                                        uploadError =
+                                                            R.string.image_upload_failed to t.localizedMessage
+                                                        uploadErrorShow = true
+                                                    }
+                                                }
+                                            } else {
+                                                MainScope().launch(Dispatchers.IO) {
+                                                    try {
+                                                        val data = File(outfile).readBytes()
+                                                        val sha256 = data.sha256()
+                                                        if (chatServer!!.updateImageCheck(
+                                                                chatServer!!.chatAPI.upc(sha256)
+                                                            )
+                                                        ) {
+                                                            ChatServer.current.send(
+                                                                RawWebSocketFrameWrapper.ofImageText(
+                                                                    sha256
+                                                                )
+                                                            )
+                                                        } else {
+                                                            ChatServer.current.send(
+                                                                RawWebSocketFrameWrapper.ofBinary(
+                                                                    data
+                                                                )
+                                                            )
+                                                        }
+                                                    } catch (e: Throwable) {
+                                                        withContext(Dispatchers.Main) {
+                                                            uploadError =
+                                                                R.string.image_upload_failed to e.localizedMessage
+                                                            uploadErrorShow = true
+                                                        }
+                                                    }
                                                 }
                                             }
-                                        } else {
-                                            MainScope().launch(Dispatchers.IO) {
-                                                ChatServer.current.send(
-                                                    RawWebSocketFrameWrapper.ofBinary(
-                                                        File(outfile).readBytes()
-                                                    )
-                                                )
-                                            }
                                         }
+                                } ?: run {
+                                    withContext(Dispatchers.Main) {
+                                        uploadError = R.string.file_not_found to null
+                                        uploadErrorShow = true
                                     }
-                            } ?: run {
-                                withContext(Dispatchers.Main) {
-                                    uploadError.value = R.string.file_not_found to null
                                 }
-                            }
-                        } catch (e: Throwable) {
-                            withContext(Dispatchers.Main) {
-                                uploadError.value =
-                                    R.string.image_upload_failed to e.localizedMessage
+                            } catch (e: Throwable) {
+                                withContext(Dispatchers.Main) {
+                                    uploadError =
+                                        R.string.image_upload_failed to e.localizedMessage
+                                    uploadErrorShow = true
+                                }
                             }
                         }
                     }
+                    retryEvent!!.invoke()
                 }
             }
 
 
-            if (uploadError.value != null) {
+            if (uploadErrorShow) {
                 AlertDialog(
-                    onDismissRequest = {},
+                    onDismissRequest = {
+                        uploadErrorShow = false
+                    },
                     confirmButton = {
-                        TextButton(onClick = {}) {
+                        TextButton(onClick = {
+                            uploadErrorShow = false
+                            retryEvent?.invoke()
+                        }) {
                             Text(text = stringResource(id = R.string.retry))
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { }) {
+                        TextButton(onClick = {
+                            uploadErrorShow = false
+                        }) {
                             Text(text = stringResource(id = R.string.ok))
                         }
                     },
                     text = {
                         Column {
-                            Text(stringResource(id = uploadError.value!!.first))
-                            if (uploadError.value!!.second != null) {
-                                Text(text = uploadError.value!!.second!!)
+                            Text(stringResource(id = uploadError!!.first))
+                            if (uploadError!!.second != null) {
+                                Text(text = uploadError!!.second!!)
                             }
                         }
                     })
