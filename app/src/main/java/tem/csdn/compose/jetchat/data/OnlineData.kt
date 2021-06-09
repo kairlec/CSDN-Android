@@ -1,7 +1,12 @@
 package tem.csdn.compose.jetchat.data
 
+import android.content.Context
+import android.os.Build
 import android.util.Log
 import androidx.compose.runtime.Composable
+import coil.ImageLoader
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.*
 import io.ktor.client.features.websocket.*
@@ -12,6 +17,9 @@ import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
+import okhttp3.Cache
+import okhttp3.OkHttpClient
+import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
@@ -19,6 +27,7 @@ import tem.csdn.compose.jetchat.util.MultiPartContent
 import tem.csdn.compose.jetchat.util.ReservableActor
 import tem.csdn.compose.jetchat.util.connectWebSocketToServer
 import tem.csdn.compose.jetchat.util.trySend
+import java.io.File
 import java.lang.Exception
 
 class ChatServerInitException(
@@ -40,6 +49,38 @@ class ChatServer(
             private set
             @get:Composable
             get
+    }
+
+    lateinit var imageLoader: ImageLoader
+        private set
+
+    fun initContext(context: Context) {
+        imageLoader = ImageLoader.Builder(context)
+            .crossfade(true)
+            .error(R.drawable.ic_broken_cable)
+            .placeholder(R.drawable.ic_loading)
+            .availableMemoryPercentage(0.7)
+            .bitmapPoolPercentage(0.7)
+            .allowRgb565(true)
+            .componentRegistry {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder(context))
+                } else {
+                    add(GifDecoder())
+                }
+            }
+            .okHttpClient {
+                OkHttpClient.Builder()
+                    .cache(
+                        Cache(
+                            File(context.cacheDir, "image_cache").apply { mkdirs() },
+                            1024L * 1024L * 1024L
+                        )
+                    )
+                    .build().apply {
+                    }
+            }
+            .build()
     }
 
     val objectMapper = jacksonObjectMapper()

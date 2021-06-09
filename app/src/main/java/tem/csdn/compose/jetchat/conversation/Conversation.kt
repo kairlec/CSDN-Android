@@ -47,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.coil.rememberCoilPainter
 import com.google.accompanist.insets.*
 import tem.csdn.compose.jetchat.FunctionalityNotAvailablePopup
 import tem.csdn.compose.jetchat.R
@@ -395,51 +396,22 @@ fun Message(
     fun Photo() {
         if (isLastMessageByAuthor) {
             // Avatar
-            author.getPhotoPainter(chatServer)?.let {
-                LoadImage(
-                    url = it,
-                    error = {
-                        Image(
-                            modifier = Modifier
-                                .clickable(onClick = { onAuthorClick(author) })
-                                .padding(horizontal = 16.dp)
-                                .size(42.dp)
-                                .border(1.5.dp, borderColor, CircleShape)
-                                .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                                .clip(CircleShape),
-                            painter = painterResource(id = R.drawable.ic_broken_cable),
-                            contentScale = ContentScale.Crop,
-                            contentDescription = null,
-                        )
-                    },
-                    loading = {
-                        Image(
-                            modifier = Modifier
-                                .clickable(onClick = { onAuthorClick(author) })
-                                .padding(horizontal = 16.dp)
-                                .size(42.dp)
-                                .border(1.5.dp, borderColor, CircleShape)
-                                .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                                .clip(CircleShape),
-                            painter = painterResource(id = R.drawable.ic_loading),
-                            contentScale = ContentScale.Crop,
-                            contentDescription = null,
-                        )
-                    }
-                ) {
-                    Image(
-                        modifier = Modifier
-                            .clickable(onClick = { onAuthorClick(author) })
-                            .padding(horizontal = 16.dp)
-                            .size(42.dp)
-                            .border(1.5.dp, borderColor, CircleShape)
-                            .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                            .clip(CircleShape),
-                        painter = it,
-                        contentScale = ContentScale.Crop,
-                        contentDescription = null,
-                    )
-                }
+            author.photo?.let { chatServer.chatAPI.image(it) }?.let {
+                Image(
+                    modifier = Modifier
+                        .clickable(onClick = { onAuthorClick(author) })
+                        .padding(horizontal = 16.dp)
+                        .size(42.dp)
+                        .border(1.5.dp, borderColor, CircleShape)
+                        .border(3.dp, MaterialTheme.colors.surface, CircleShape)
+                        .clip(CircleShape),
+                    painter = rememberCoilPainter(
+                        request = it,
+                        imageLoader = chatServer.imageLoader
+                    ),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null,
+                )
             } ?: run {
                 Image(
                     modifier = Modifier
@@ -669,42 +641,24 @@ fun ChatItemBubble(
     }
     Column {
         if (message.image != null) {
-            message.getImagePainter(chatServer)?.let {
+            message.image.let { chatServer.chatAPI.image(it) }.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(
                     color = backgroundBubbleColor,
                     shape = bubbleShape
                 ) {
-                    LoadImage(url = it,
-                        loading = {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_loading),
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(160.dp),
-                                contentDescription = stringResource(id = R.string.attached_image)
-                            )
-                        },
-                        error = {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_broken_cable),
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(160.dp),
-                                contentDescription = stringResource(id = R.string.attached_image)
-                            )
-                        }
-                    ) {
-                        Image(
-                            painter = it,
-//                        contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .widthIn(min = 160.dp, max = 240.dp)
-                                .clickable {
-                                    painterClicked(it)
-                                },
-                            contentScale = ContentScale.FillWidth,
-                            contentDescription = stringResource(id = R.string.attached_image)
-                        )
-                    }
+                    val painter =
+                        rememberCoilPainter(request = it, imageLoader = chatServer.imageLoader)
+                    Image(
+                        painter = painter,
+                        modifier = Modifier
+                            .widthIn(min = 160.dp, max = 240.dp)
+                            .clickable {
+                                painterClicked(painter)
+                            },
+                        contentScale = ContentScale.FillWidth,
+                        contentDescription = stringResource(id = R.string.attached_image)
+                    )
                 }
             }
         } else {

@@ -23,7 +23,6 @@ import tem.csdn.compose.jetchat.model.HeartBeatException
 import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
-import tem.csdn.compose.jetchat.util.MediaFileCacheHelper
 import tem.csdn.compose.jetchat.util.UUIDHelper
 import tem.csdn.compose.jetchat.util.client
 import java.util.*
@@ -107,8 +106,6 @@ class ChatViewModel : ViewModel() {
         MainScope().launch(Dispatchers.IO) {
             val uuid = UUIDHelper[context]
             Log.d("CSDN_DEBUG", "uuid=${uuid}")
-            val mediaFileCacheHelper = MediaFileCacheHelper()
-            mediaFileCacheHelper.initDiskLruCache(context, 1)
             val db = Room
                 .databaseBuilder(context, AppDatabase::class.java, "database-csdn-android")
                 .build()
@@ -132,6 +129,7 @@ class ChatViewModel : ViewModel() {
                     _webSocketStatus.value = it
                 }
             }
+            chatServer.initContext(context)
             withContext(Dispatchers.Main) {
                 _chatServer.value = chatServer
                 Log.d("CSDN_UPDATE", "update chatServer success")
@@ -245,6 +243,7 @@ class ChatViewModel : ViewModel() {
                     try {
                         rawWebSocketFrameWrapper.ifTextWrapper(chatServer.objectMapper) {
                             when (it.type) {
+                                TextWebSocketFrameWrapper.FrameType.IMAGE_MESSAGE,
                                 TextWebSocketFrameWrapper.FrameType.TEXT_MESSAGE -> {
                                     val msg =
                                         chatServer.objectMapper.convertValue<Message>(it.content!!)

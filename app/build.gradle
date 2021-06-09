@@ -117,6 +117,8 @@ dependencies {
     implementation Libs.AndroidX.Compose.viewBinding
 
     implementation Libs.Accompanist.insets
+    implementation Libs.Accompanist.coil
+    implementation Libs.Accompanist.coil_gif
 
     implementation Libs.AndroidX.Room.runtime
     implementation Libs.AndroidX.Room.ktx

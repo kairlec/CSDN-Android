@@ -1,5 +1,6 @@
 package tem.csdn.compose.jetchat.conversation
 
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -29,24 +30,26 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.findNavController
-import tem.csdn.compose.jetchat.MainViewModel
-import tem.csdn.compose.jetchat.R
-import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.ExperimentalAnimatedInsets
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ViewWindowInsetObserver
 import com.google.accompanist.insets.navigationBarsPadding
 import com.zxy.tiny.Tiny
+import io.ktor.util.Identity.decode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import tem.csdn.compose.jetchat.MainViewModel
+import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.components.FullScreenDialog
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.data.RawWebSocketFrameWrapper
+import tem.csdn.compose.jetchat.theme.JetchatTheme
 import tem.csdn.compose.jetchat.util.sha256
 import java.io.File
+
 
 class ConversationFragment : Fragment() {
     private val chatViewModel: ChatViewModel by activityViewModels()
@@ -119,52 +122,86 @@ class ConversationFragment : Fragment() {
                                 context.contentResolver.openInputStream(uri)?.use {
                                     it.readBytes()
                                 }?.let {
-                                    val options: Tiny.FileCompressOptions =
-                                        Tiny.FileCompressOptions().apply {
-                                            size = 200f
-                                        }
-                                    Tiny.getInstance().source(it).asFile().withOptions(options)
-                                        .compress { isSuccess, outfile, t ->
-                                            Log.d("CSDN_DEBUG_TINY", "outfile=${outfile}")
-                                            if (!isSuccess) {
-                                                if (t != null) {
-                                                    MainScope().launch(Dispatchers.Main) {
-                                                        uploadError =
-                                                            R.string.image_upload_failed to t.localizedMessage
-                                                        uploadErrorShow = true
-                                                    }
+                                    val opt =
+                                        BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                    BitmapFactory.decodeByteArray(it, 0, it.size, opt)
+                                    val mime = opt.outMimeType
+                                    if (mime.equals("image/gif", true)) {
+                                        MainScope().launch(Dispatchers.IO) {
+                                            try {
+                                                val sha256 = it.sha256()
+                                                if (chatServer!!.updateImageCheck(
+                                                        chatServer!!.chatAPI.upc(sha256)
+                                                    )
+                                                ) {
+                                                    ChatServer.current.send(
+                                                        RawWebSocketFrameWrapper.ofImageText(
+                                                            sha256
+                                                        )
+                                                    )
+                                                } else {
+                                                    ChatServer.current.send(
+                                                        RawWebSocketFrameWrapper.ofBinary(
+                                                            it
+                                                        )
+                                                    )
                                                 }
-                                            } else {
-                                                MainScope().launch(Dispatchers.IO) {
-                                                    try {
-                                                        val data = File(outfile).readBytes()
-                                                        val sha256 = data.sha256()
-                                                        if (chatServer!!.updateImageCheck(
-                                                                chatServer!!.chatAPI.upc(sha256)
-                                                            )
-                                                        ) {
-                                                            ChatServer.current.send(
-                                                                RawWebSocketFrameWrapper.ofImageText(
-                                                                    sha256
-                                                                )
-                                                            )
-                                                        } else {
-                                                            ChatServer.current.send(
-                                                                RawWebSocketFrameWrapper.ofBinary(
-                                                                    data
-                                                                )
-                                                            )
-                                                        }
-                                                    } catch (e: Throwable) {
-                                                        withContext(Dispatchers.Main) {
+                                            } catch (e: Throwable) {
+                                                withContext(Dispatchers.Main) {
+                                                    uploadError =
+                                                        R.string.image_upload_failed to e.localizedMessage
+                                                    uploadErrorShow = true
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        val options: Tiny.FileCompressOptions =
+                                            Tiny.FileCompressOptions().apply {
+                                                size = 200f
+                                            }
+                                        Tiny.getInstance().source(it).asFile().withOptions(options)
+                                            .compress { isSuccess, outfile, t ->
+                                                Log.d("CSDN_DEBUG_TINY", "outfile=${outfile}")
+                                                if (!isSuccess) {
+                                                    if (t != null) {
+                                                        MainScope().launch(Dispatchers.Main) {
                                                             uploadError =
-                                                                R.string.image_upload_failed to e.localizedMessage
+                                                                R.string.image_upload_failed to t.localizedMessage
                                                             uploadErrorShow = true
+                                                        }
+                                                    }
+                                                } else {
+                                                    MainScope().launch(Dispatchers.IO) {
+                                                        try {
+                                                            val data = File(outfile).readBytes()
+                                                            val sha256 = data.sha256()
+                                                            if (chatServer!!.updateImageCheck(
+                                                                    chatServer!!.chatAPI.upc(sha256)
+                                                                )
+                                                            ) {
+                                                                ChatServer.current.send(
+                                                                    RawWebSocketFrameWrapper.ofImageText(
+                                                                        sha256
+                                                                    )
+                                                                )
+                                                            } else {
+                                                                ChatServer.current.send(
+                                                                    RawWebSocketFrameWrapper.ofBinary(
+                                                                        data
+                                                                    )
+                                                                )
+                                                            }
+                                                        } catch (e: Throwable) {
+                                                            withContext(Dispatchers.Main) {
+                                                                uploadError =
+                                                                    R.string.image_upload_failed to e.localizedMessage
+                                                                uploadErrorShow = true
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
+                                    }
                                 } ?: run {
                                     withContext(Dispatchers.Main) {
                                         uploadError = R.string.file_not_found to null
@@ -271,7 +308,7 @@ class ConversationFragment : Fragment() {
                             modifier = Modifier.navigationBarsPadding(bottom = false),
                             chatServer = chatServer!!,
                             getProfile = {
-                                allProfiles?.get(it)?:chatViewModel.userDao.getByDisplayId(it)
+                                allProfiles?.get(it) ?: chatViewModel.userDao.getByDisplayId(it)
                             },
                             meProfile = meProfile!!,
                             chatServerOffline = !online,

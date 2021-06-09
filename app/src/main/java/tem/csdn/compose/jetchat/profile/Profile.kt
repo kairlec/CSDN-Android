@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.coil.rememberCoilPainter
 import tem.csdn.compose.jetchat.FunctionalityNotAvailablePopup
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.components.AnimatingFabContent
@@ -34,7 +35,6 @@ import tem.csdn.compose.jetchat.theme.JetchatTheme
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.insets.statusBarsPadding
-import tem.csdn.compose.jetchat.conversation.LoadImage
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
 
@@ -379,31 +379,13 @@ private fun ProfileHeader(
         .clickable {
             onAvatarClick()
         }
-    data.getPhotoPainter(chatServer)?.let {
-        LoadImage(url = it,
-            error = {
-                Image(
-                    modifier = modifier,
-                    painter = painterResource(id = R.drawable.ic_broken_cable),
-                    contentScale = ContentScale.Crop,
-                    contentDescription = null
-                )
-            },
-            loading = {
-                Image(
-                    modifier = modifier,
-                    painter = painterResource(id = R.drawable.ic_loading),
-                    contentScale = ContentScale.Crop,
-                    contentDescription = null
-                )
-            }) {
-            Image(
-                modifier = modifier,
-                painter = it,
-                contentScale = ContentScale.Crop,
-                contentDescription = null
-            )
-        }
+    data.photo?.let { chatServer.chatAPI.image(it) }?.let {
+        Image(
+            modifier = modifier,
+            painter = rememberCoilPainter(request = it, imageLoader = chatServer.imageLoader),
+            contentScale = ContentScale.Crop,
+            contentDescription = null
+        )
     } ?: run {
         Image(
             modifier = modifier,
