@@ -483,6 +483,7 @@ fun Message(
         if (isUserMe) {
             AuthorAndTextMessage(
                 Modifier
+                    .padding(start = 16.dp)
                     .weight(1f)
             )
             Photo()
