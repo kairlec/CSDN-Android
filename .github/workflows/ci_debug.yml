@@ -4,10 +4,8 @@ on:
   release:
     types: [published]
   push:
-    branches:
-      - ci
     tags:
-      - v*
+      - '*'
 
 jobs:
   build:
@@ -23,12 +21,6 @@ jobs:
           echo "开始进行Debug构建"
           chmod +x gradlew
           ./gradlew app:assembleDebug
-      - name : Upload apk
-        uses: actions/upload-artifact@master
-        if: always()
-        with:
-          name: xupdate_apk
-          path: ${{ github.workspace }}/app/build/outputs/apk/debug
       - name: Release apk
         uses: ncipollo/release-action@v1.8.6
         with:
