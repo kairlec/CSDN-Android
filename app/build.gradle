@@ -6,6 +6,12 @@ plugins {
     id "org.jetbrains.kotlin.kapt"
 }
 
+def signingFilePath = 'signing.gradle'
+def performSigning = file(signingFilePath).exists()
+if (performSigning) {
+    apply from: signingFilePath
+}
+
 android {
     compileSdkVersion 30
 
@@ -13,8 +19,8 @@ android {
         applicationId "tem.csdn.compose.jetchat"
         minSdkVersion 26
         targetSdkVersion 30
-        versionCode 3
-        versionName '1.1'
+        versionCode(getTimeStamp.call() as int)
+        versionName "1.2" + (getGitHeadRefsSuffix.call() as String)
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
         vectorDrawables.useSupportLibrary = true
@@ -31,18 +37,35 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (performSigning) {
+            release {
+                storeFile file(project.signing.storeFilePath)
+                storePassword project.signing.storePassword
+                keyAlias project.signing.keyAlias
+                keyPassword project.signing.keyPassword
+                v1SigningEnabled true
+                v2SigningEnabled true
+            }
+        }
     }
 
     buildTypes {
         debug {
             debuggable true
             signingConfig signingConfigs.debug
+            shrinkResources true
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
 
         release {
             debuggable false
+            shrinkResources true
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (performSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
@@ -53,6 +76,7 @@ android {
 
     kotlinOptions {
         jvmTarget = '1.8'
+        useIR = true
     }
 
     buildFeatures {
