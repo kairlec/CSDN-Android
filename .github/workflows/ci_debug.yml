@@ -33,5 +33,5 @@ jobs:
         uses: ncipollo/release-action@v1.8.6
         with:
           artifacts: "build/app/outputs/apk/debug/*.apk"
-          token: ${{ secrets.GITHUB_RELEASE_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN }}
           prerelease: true
