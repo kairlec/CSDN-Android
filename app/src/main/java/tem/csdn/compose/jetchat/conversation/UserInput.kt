@@ -81,17 +81,17 @@ enum class EmojiStickerSelector {
 @Preview
 @Composable
 fun UserInputPreview() {
-    UserInput(onMessageSent = {}, onImageSelect = {})
+    userInput(onMessageSent = {}, onImageSelect = {})
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun UserInput(
+fun userInput(
     onMessageSent: (String) -> Unit,
     modifier: Modifier = Modifier,
     resetScroll: () -> Unit = {},
     onImageSelect: () -> Unit
-) {
+): (String) -> Unit {
     var currentInputSelector by rememberSaveable { mutableStateOf(InputSelector.NONE) }
     val dismissKeyboard = { currentInputSelector = InputSelector.NONE }
 
@@ -141,6 +141,9 @@ fun UserInput(
             currentSelector = currentInputSelector,
             onImageSelect = onImageSelect
         )
+    }
+    return {
+        textState = textState.addText(it)
     }
 }
 

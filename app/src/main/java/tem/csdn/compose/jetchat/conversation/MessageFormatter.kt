@@ -1,5 +1,6 @@
 package tem.csdn.compose.jetchat.conversation
 
+import android.util.Log
 import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -17,7 +18,7 @@ import tem.csdn.compose.jetchat.model.User
 
 // Regex containing the syntax tokens
 val symbolPattern by lazy {
-    Regex("""(https?://[^\s\t\n]+)|(`[^`]+`)|(@\w+)|(\*[\w]+\*)|(_[\w]+_)|(~[\w]+~)""")
+    Regex("""(https?://[^\s\t\n]+)|(`[^`]+`)|(@[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})|(\*[\w]+\*)|(_[\w]+_)|(~[\w]+~)""")
 }
 
 // Accepted annotations for the ClickableTextWrapper
@@ -99,21 +100,28 @@ private fun getSymbolAnnotation(
 ): SymbolAnnotation {
     return when (matchResult.value.first()) {
         '@' -> {
-            val userId = matchResult.value.substring(1)
-            val profile = getProfile(userId)
+            Log.d("CSDN_DEBUG", "@value=${matchResult.value}")
+            val userDisplayId = matchResult.value.substring(1)/*.let {
+                if (it.length > 36) {
+                    it.substring(0, 36)
+                } else {
+                    it
+                }
+            }*/
+            val profile = getProfile(userDisplayId)
             if (profile == null) {
                 SymbolAnnotation(AnnotatedString(matchResult.value), null)
             } else {
                 SymbolAnnotation(
                     AnnotatedString(
-                        text = "@${profile.displayName}",
+                        text = " @${profile.displayName} ",
                         spanStyle = SpanStyle(
                             color = colors.primary,
                             fontWeight = FontWeight.Bold
                         )
                     ),
                     StringAnnotation(
-                        item = userId,
+                        item = userDisplayId,
                         start = matchResult.range.first,
                         end = matchResult.range.first + profile.displayName.length,
                         tag = SymbolAnnotationType.PERSON.name

@@ -1,10 +1,8 @@
 package tem.csdn.compose.jetchat.conversation
 
 import android.text.format.DateFormat
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import android.util.Log
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -104,6 +102,7 @@ fun ConversationContent(
     Surface(modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
+                var atEvent: ((String) -> Unit)? = null
                 Messages(
                     messages = messages,
                     navigateToProfile = navigateToProfile,
@@ -112,9 +111,17 @@ fun ConversationContent(
                     chatServer = chatServer,
                     getProfile = getProfile,
                     meProfile = meProfile,
-                    painterClicked = painterClicked
+                    painterClicked = painterClicked,
+                    atUser = {
+                        if (atEvent == null) {
+                            Log.e("CSDN_ERROR", "at add null")
+                        } else {
+                            Log.i("CSDN_INFO", "at add ${it.displayId}")
+                        }
+                        atEvent?.invoke("@${it.displayId} ")
+                    }
                 )
-                UserInput(
+                atEvent = userInput(
                     onMessageSent = { content ->
                         runBlocking {
                             chatServer.send(
@@ -216,6 +223,7 @@ const val ConversationTestTag = "ConversationTestTag"
 fun Messages(
     messages: List<LocalMessage>,
     navigateToProfile: (User) -> Unit,
+    atUser: (User) -> Unit,
     scrollState: LazyListState,
     modifier: Modifier = Modifier,
     getProfile: (String) -> User?,
@@ -311,7 +319,8 @@ fun Messages(
                         "%s %02d:%02d".format(ap, hour, msgTime.minute)
                     }
                     Message(
-                        onAuthorClick = { displayId -> navigateToProfile(displayId) },
+                        onAuthorClick = { user -> navigateToProfile(user) },
+                        onAuthorLongClick = { user -> atUser(user) },
                         msg = content,
                         isUserMe = content.authorDisplayId == meProfile.displayId,
                         isFirstMessageByAuthor = isFirstMessageByAuthor,
@@ -374,9 +383,11 @@ fun Messages(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Message(
     onAuthorClick: (User) -> Unit,
+    onAuthorLongClick: (User) -> Unit,
     painterClicked: (Painter) -> Unit,
     getProfile: (String) -> User?,
     msg: LocalMessage,
@@ -401,7 +412,10 @@ fun Message(
                 val context = LocalContext.current
                 Image(
                     modifier = Modifier
-                        .clickable(onClick = { onAuthorClick(author) })
+                        .combinedClickable(
+                            onClick = { onAuthorClick(author) },
+                            onLongClick = { onAuthorLongClick(author) }
+                        )
                         .padding(horizontal = 16.dp)
                         .size(42.dp)
                         .border(1.5.dp, borderColor, CircleShape)
@@ -417,7 +431,10 @@ fun Message(
             } ?: run {
                 Image(
                     modifier = Modifier
-                        .clickable(onClick = { onAuthorClick(author) })
+                        .combinedClickable(
+                            onClick = { onAuthorClick(author) },
+                            onLongClick = { onAuthorLongClick(author) }
+                        )
                         .padding(horizontal = 16.dp)
                         .size(42.dp)
                         .border(1.5.dp, borderColor, CircleShape)
