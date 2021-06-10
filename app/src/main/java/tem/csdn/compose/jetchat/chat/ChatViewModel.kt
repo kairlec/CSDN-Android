@@ -23,6 +23,7 @@ import tem.csdn.compose.jetchat.model.HeartBeatException
 import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.DeviceIdUtil
 import tem.csdn.compose.jetchat.util.UUIDHelper
 import tem.csdn.compose.jetchat.util.client
 import java.util.*
@@ -40,6 +41,7 @@ class ChatViewModel : ViewModel() {
 
     fun updateProfile(user: User) {
         this._meProfile.value = user
+        _allProfiles.value?.set(user.displayId, user)
     }
 
     private var inited = false
@@ -104,7 +106,8 @@ class ChatViewModel : ViewModel() {
         inited = true
         Log.i("CSDN_INIT", "app start up initializer start")
         MainScope().launch(Dispatchers.IO) {
-            val uuid = UUIDHelper[context]
+//            val uuid = UUIDHelper[context]
+            val uuid = DeviceIdUtil.getDeviceId(context)!!
             Log.d("CSDN_DEBUG", "uuid=${uuid}")
             val db = Room
                 .databaseBuilder(context, AppDatabase::class.java, "database-csdn-android")

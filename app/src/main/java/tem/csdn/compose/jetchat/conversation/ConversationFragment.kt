@@ -255,14 +255,14 @@ class ConversationFragment : Fragment() {
                                                         chatServer!!.chatAPI.upc(sha256)
                                                     )
                                                 ) {
-                                                    Log.d("CSDN_DEBUG_UPC","upc检查存在")
+                                                    Log.d("CSDN_DEBUG_UPC", "upc检查存在")
                                                     ChatServer.current.send(
                                                         RawWebSocketFrameWrapper.ofImageText(
                                                             sha256
                                                         )
                                                     )
                                                 } else {
-                                                    Log.d("CSDN_DEBUG_UPC","upc检查不存在")
+                                                    Log.d("CSDN_DEBUG_UPC", "upc检查不存在")
                                                     ChatServer.current.send(
                                                         RawWebSocketFrameWrapper.ofBinary(
                                                             bytes
@@ -303,14 +303,14 @@ class ConversationFragment : Fragment() {
                                                                     chatServer!!.chatAPI.upc(sha256)
                                                                 )
                                                             ) {
-                                                                Log.d("CSDN_DEBUG_UPC","upc检查存在")
+                                                                Log.d("CSDN_DEBUG_UPC", "upc检查存在")
                                                                 ChatServer.current.send(
                                                                     RawWebSocketFrameWrapper.ofImageText(
                                                                         sha256
                                                                     )
                                                                 )
                                                             } else {
-                                                                Log.d("CSDN_DEBUG_UPC","upc检查不存在")
+                                                                Log.d("CSDN_DEBUG_UPC", "upc检查不存在")
                                                                 ChatServer.current.send(
                                                                     RawWebSocketFrameWrapper.ofBinary(
                                                                         data
@@ -366,7 +366,7 @@ class ConversationFragment : Fragment() {
                             modifier = Modifier.navigationBarsPadding(bottom = false),
                             chatServer = chatServer!!,
                             getProfile = {
-                                allProfiles?.get(it) ?: chatViewModel.userDao.getByDisplayId(it)
+                                allProfiles?.get(it)
                             },
                             meProfile = meProfile!!,
                             chatServerOffline = !online,
