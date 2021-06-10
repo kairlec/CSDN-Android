@@ -23,10 +23,7 @@ import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
-import tem.csdn.compose.jetchat.util.MultiPartContent
-import tem.csdn.compose.jetchat.util.ReservableActor
-import tem.csdn.compose.jetchat.util.connectWebSocketToServer
-import tem.csdn.compose.jetchat.util.trySend
+import tem.csdn.compose.jetchat.util.*
 import java.io.File
 import java.lang.Exception
 
@@ -68,6 +65,7 @@ class ChatServer(
                 } else {
                     add(GifDecoder())
                 }
+                add(CoilByteArrayFetcher())
             }
             .okHttpClient {
                 OkHttpClient.Builder()
