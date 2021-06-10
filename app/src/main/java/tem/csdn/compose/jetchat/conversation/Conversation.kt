@@ -68,6 +68,7 @@ import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.theme.JetchatTheme
+import tem.csdn.compose.jetchat.util.OkHttpCacheHelper
 import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.LocalTime
@@ -397,6 +398,7 @@ fun Message(
         if (isLastMessageByAuthor) {
             // Avatar
             author.photo?.let { chatServer.chatAPI.image(it) }?.let {
+                val context = LocalContext.current
                 Image(
                     modifier = Modifier
                         .clickable(onClick = { onAuthorClick(author) })
@@ -406,7 +408,7 @@ fun Message(
                         .border(3.dp, MaterialTheme.colors.surface, CircleShape)
                         .clip(CircleShape),
                     painter = rememberCoilPainter(
-                        request = it,
+                        request = OkHttpCacheHelper.getCacheFileOrUrl(context, it),
                         imageLoader = chatServer.imageLoader
                     ),
                     contentScale = ContentScale.Crop,
@@ -641,6 +643,7 @@ fun ChatItemBubble(
     }
     Column {
         if (message.image != null) {
+            val context = LocalContext.current
             message.image.let { chatServer.chatAPI.image(it) }.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(
@@ -648,7 +651,10 @@ fun ChatItemBubble(
                     shape = bubbleShape
                 ) {
                     val painter =
-                        rememberCoilPainter(request = it, imageLoader = chatServer.imageLoader)
+                        rememberCoilPainter(
+                            request = OkHttpCacheHelper.getCacheFile(context, it),
+                            imageLoader = chatServer.imageLoader
+                        )
                     Image(
                         painter = painter,
                         modifier = Modifier

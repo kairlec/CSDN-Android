@@ -69,14 +69,8 @@ class ChatServer(
             }
             .okHttpClient {
                 OkHttpClient.Builder()
-                    .cache(
-                        Cache(
-                            File(context.cacheDir, "image_cache").apply { mkdirs() },
-                            1024L * 1024L * 1024L
-                        )
-                    )
-                    .build().apply {
-                    }
+                    .cache(OkHttpCacheHelper.getCache(context))
+                    .build()
             }
             .build()
     }
