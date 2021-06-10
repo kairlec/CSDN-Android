@@ -24,6 +24,6 @@ jobs:
       - name: Release apk
         uses: ncipollo/release-action@v1.8.6
         with:
-          artifacts: "build/app/outputs/apk/debug/*.apk"
+          artifacts: "app/build/outputs/apk/debug/*.apk"
           token: ${{ secrets.RELEASE_TOKEN }}
           prerelease: true
