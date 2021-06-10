@@ -41,6 +41,7 @@ class ChatViewModel : ViewModel() {
 
     fun updateProfile(user: User) {
         this._meProfile.value = user
+        _allProfiles.value?.set(user.displayId, user)
     }
 
     private var inited = false
