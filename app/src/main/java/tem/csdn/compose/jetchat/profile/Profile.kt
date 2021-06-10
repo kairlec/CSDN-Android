@@ -37,6 +37,7 @@ import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.insets.statusBarsPadding
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.OkHttpCacheHelper
 
 @Composable
 fun ProfileScreen(
@@ -379,10 +380,16 @@ private fun ProfileHeader(
         .clickable {
             onAvatarClick()
         }
+    val context = LocalContext.current
     data.photo?.let { chatServer.chatAPI.image(it) }?.let {
         Image(
             modifier = modifier,
-            painter = rememberCoilPainter(request = it, imageLoader = chatServer.imageLoader),
+            painter = rememberCoilPainter(
+                request = OkHttpCacheHelper.getCacheFileOrUrl(
+                    context,
+                    it
+                ), imageLoader = chatServer.imageLoader
+            ),
             contentScale = ContentScale.Crop,
             contentDescription = null
         )

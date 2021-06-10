@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,7 @@ import com.google.accompanist.insets.statusBarsHeight
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.OkHttpCacheHelper
 
 @Composable
 fun ColumnScope.JetchatDrawer(
@@ -121,6 +123,7 @@ private fun ChatItem(
             .clickable(onClick = onChatClicked),
         verticalAlignment = CenterVertically
     ) {
+        val context = LocalContext.current
         val iconTint = if (selected) {
             MaterialTheme.colors.primary
         } else {
@@ -136,7 +139,7 @@ private fun ChatItem(
         } else {
             Icon(
                 painter = rememberCoilPainter(
-                    request = chatPhoto,
+                    request = OkHttpCacheHelper.getCacheFileOrUrl(context, chatPhoto),
                     imageLoader = ChatServer.current.imageLoader
                 ),
                 contentDescription = null,
@@ -167,13 +170,14 @@ private fun ProfileItem(text: String, profilePic: String?, onProfileClicked: () 
         verticalAlignment = CenterVertically
     ) {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+            val context = LocalContext.current
             val widthPaddingModifier = Modifier
                 .padding(8.dp)
                 .size(24.dp)
             if (profilePic != null) {
                 Image(
                     painter = rememberCoilPainter(
-                        request = profilePic,
+                        request = OkHttpCacheHelper.getCacheFile(context, profilePic),
                         imageLoader = ChatServer.current.imageLoader
                     ),
                     modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
