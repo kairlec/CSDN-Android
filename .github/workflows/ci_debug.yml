@@ -1,8 +1,6 @@
 name: Android CI(Debug)
 
 on:
-  release:
-    types: [published]
   push:
     tags:
       - '*'
