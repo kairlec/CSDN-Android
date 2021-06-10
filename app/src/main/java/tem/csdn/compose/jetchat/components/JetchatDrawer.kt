@@ -177,7 +177,7 @@ private fun ProfileItem(text: String, profilePic: String?, onProfileClicked: () 
             if (profilePic != null) {
                 Image(
                     painter = rememberCoilPainter(
-                        request = OkHttpCacheHelper.getCacheFile(context, profilePic),
+                        request = OkHttpCacheHelper.getCacheFileOrUrl(context, profilePic),
                         imageLoader = ChatServer.current.imageLoader
                     ),
                     modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),

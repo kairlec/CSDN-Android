@@ -652,7 +652,7 @@ fun ChatItemBubble(
                 ) {
                     val painter =
                         rememberCoilPainter(
-                            request = OkHttpCacheHelper.getCacheFile(context, it),
+                            request = OkHttpCacheHelper.getCacheFileOrUrl(context, it),
                             imageLoader = chatServer.imageLoader
                         )
                     Image(
