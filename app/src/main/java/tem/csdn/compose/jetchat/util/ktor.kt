@@ -29,8 +29,6 @@ val client = HttpClient(CIO) {
     }
 }
 
-fun currentHttpClient() = client
-
 suspend fun connectWebSocketToServer(
     ssl: Boolean,
     host: String = "localhost",

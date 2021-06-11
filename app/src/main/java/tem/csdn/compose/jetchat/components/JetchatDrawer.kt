@@ -24,15 +24,17 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.coil.rememberCoilPainter
 import tem.csdn.compose.jetchat.R
 import com.google.accompanist.insets.statusBarsHeight
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
-import tem.csdn.compose.jetchat.conversation.LoadImage
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.util.OkHttpCacheHelper
 
 @Composable
 fun ColumnScope.JetchatDrawer(
@@ -61,13 +63,15 @@ fun ColumnScope.JetchatDrawer(
     DrawerItemHeader(stringResource(id = R.string.profile_header))
     ProfileItem(
         text = "${meProfile.displayName}(${stringResource(id = R.string.author_me)})",
-        profilePic = meProfile.getPhotoPainter(chatServer)
+        profilePic = meProfile.photo?.let { chatServer.chatAPI.image(it) }
     ) {
         onProfileClicked(meProfile)
     }
     profiles.forEach {
         if (it.displayId != meProfile.displayId) {
-            ProfileItem(text = it.displayName, profilePic = it.getPhotoPainter(chatServer)) {
+            ProfileItem(
+                text = it.displayName,
+                profilePic = it.photo?.let { chatServer.chatAPI.image(it) }) {
                 onProfileClicked(it)
             }
         }
@@ -119,6 +123,7 @@ private fun ChatItem(
             .clickable(onClick = onChatClicked),
         verticalAlignment = CenterVertically
     ) {
+        val context = LocalContext.current
         val iconTint = if (selected) {
             MaterialTheme.colors.primary
         } else {
@@ -132,32 +137,15 @@ private fun ChatItem(
                 contentDescription = null
             )
         } else {
-            LoadImage(
-                url = chatPhoto,
-                loading = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_loading),
-                        tint = iconTint,
-                        modifier = Modifier.padding(8.dp),
-                        contentDescription = null
-                    )
-                },
-                error = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_broken_cable),
-                        tint = iconTint,
-                        modifier = Modifier.padding(8.dp),
-                        contentDescription = null
-                    )
-                }
-            ) {
-                Icon(
-                    painter = it,
-                    tint = iconTint,
-                    modifier = Modifier.padding(8.dp),
-                    contentDescription = null
-                )
-            }
+            Icon(
+                painter = rememberCoilPainter(
+                    request = OkHttpCacheHelper.getCacheFileOrUrl(context, chatPhoto),
+                    imageLoader = ChatServer.current.imageLoader
+                ),
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.padding(8.dp),
+            )
         }
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
             Text(
@@ -182,38 +170,21 @@ private fun ProfileItem(text: String, profilePic: String?, onProfileClicked: () 
         verticalAlignment = CenterVertically
     ) {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+            val context = LocalContext.current
             val widthPaddingModifier = Modifier
                 .padding(8.dp)
                 .size(24.dp)
             if (profilePic != null) {
-                LoadImage(
-                    url = profilePic,
-                    error = {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_broken_cable),
-                            modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
-                            contentScale = ContentScale.Crop,
-                            contentDescription = null
-                        )
-                    },
-                    loading = {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_loading),
-                            modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
-                            contentScale = ContentScale.Crop,
-                            contentDescription = null
-                        )
-                    }
-                ) {
-                    Image(
-                        painter = it,
-                        modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
-                        contentScale = ContentScale.Crop,
-                        contentDescription = null
-                    )
-                }
+                Image(
+                    painter = rememberCoilPainter(
+                        request = OkHttpCacheHelper.getCacheFileOrUrl(context, profilePic),
+                        imageLoader = ChatServer.current.imageLoader
+                    ),
+                    modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null
+                )
             } else {
-//                Spacer(modifier = widthPaddingModifier)
                 Image(
                     painter = painterResource(id = R.drawable.ic_default_avatar_man),
                     modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),

@@ -1,10 +1,8 @@
 package tem.csdn.compose.jetchat.conversation
 
 import android.text.format.DateFormat
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import android.util.Log
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -47,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.coil.rememberCoilPainter
 import com.google.accompanist.insets.*
 import tem.csdn.compose.jetchat.FunctionalityNotAvailablePopup
 import tem.csdn.compose.jetchat.R
@@ -63,9 +62,11 @@ import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatDataScreenState
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.data.RawWebSocketFrameWrapper
+import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.theme.JetchatTheme
+import tem.csdn.compose.jetchat.util.OkHttpCacheHelper
 import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.LocalTime
@@ -85,7 +86,7 @@ fun ConversationContent(
     chatData: ChatDataScreenState,
     chatServerOffline: Boolean,
     onlineMembers: Int,
-    messages: List<Message>,
+    messages: List<LocalMessage>,
     navigateToProfile: (User) -> Unit,
     getProfile: (String) -> User?,
     modifier: Modifier = Modifier,
@@ -101,6 +102,7 @@ fun ConversationContent(
     Surface(modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
+                var atEvent: ((String) -> Unit)? = null
                 Messages(
                     messages = messages,
                     navigateToProfile = navigateToProfile,
@@ -109,9 +111,17 @@ fun ConversationContent(
                     chatServer = chatServer,
                     getProfile = getProfile,
                     meProfile = meProfile,
-                    painterClicked = painterClicked
+                    painterClicked = painterClicked,
+                    atUser = {
+                        if (atEvent == null) {
+                            Log.e("CSDN_ERROR", "at add null")
+                        } else {
+                            Log.i("CSDN_INFO", "at add ${it.displayId}")
+                        }
+                        atEvent?.invoke("@${it.displayId} ")
+                    }
                 )
-                UserInput(
+                atEvent = userInput(
                     onMessageSent = { content ->
                         runBlocking {
                             chatServer.send(
@@ -211,8 +221,9 @@ const val ConversationTestTag = "ConversationTestTag"
 
 @Composable
 fun Messages(
-    messages: List<Message>,
+    messages: List<LocalMessage>,
     navigateToProfile: (User) -> Unit,
+    atUser: (User) -> Unit,
     scrollState: LazyListState,
     modifier: Modifier = Modifier,
     getProfile: (String) -> User?,
@@ -246,10 +257,8 @@ fun Messages(
                 val prevMessage = messages.getOrNull(index - 1)
                 val nextMessage = messages.getOrNull(index + 1)
                 val content = messages[index]
-                val prevAuthor = prevMessage?.author
-                val nextAuthor = nextMessage?.author
-                val isFirstMessageByAuthor = prevAuthor != content.author
-                val isLastMessageByAuthor = nextAuthor != content.author
+                val isFirstMessageByAuthor = prevMessage?.authorDisplayId != content.authorDisplayId
+                val isLastMessageByAuthor = nextMessage?.authorDisplayId != content.authorDisplayId
 
                 // Hardcode day dividers for simplicity
                 val msgTime =
@@ -310,9 +319,10 @@ fun Messages(
                         "%s %02d:%02d".format(ap, hour, msgTime.minute)
                     }
                     Message(
-                        onAuthorClick = { displayId -> navigateToProfile(displayId) },
+                        onAuthorClick = { user -> navigateToProfile(user) },
+                        onAuthorLongClick = { user -> atUser(user) },
                         msg = content,
-                        isUserMe = content.author.displayId == meProfile.displayId,
+                        isUserMe = content.authorDisplayId == meProfile.displayId,
                         isFirstMessageByAuthor = isFirstMessageByAuthor,
                         isLastMessageByAuthor = isLastMessageByAuthor,
                         msgTimeString = msgTimeString,
@@ -324,7 +334,7 @@ fun Messages(
                 if (nextMessage == null) {
                     draw()
                 } else {
-                    if (nextDraw && nextMessage.author.displayId != content.author.displayId) {
+                    if (nextDraw && nextMessage.authorDisplayId != content.authorDisplayId) {
                         draw()
                         nextDraw = false
                     } else {
@@ -335,7 +345,7 @@ fun Messages(
                                 OffsetDateTime.now().offset
                             )
                         if (nextMsgTime.toLocalDate() != msgTime.toLocalDate()) {
-                            if (nextMessage.author.displayId == content.author.displayId) {
+                            if (nextMessage.authorDisplayId == content.authorDisplayId) {
                                 nextDraw = true
                             } else {
                                 draw()
@@ -373,12 +383,14 @@ fun Messages(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Message(
     onAuthorClick: (User) -> Unit,
+    onAuthorLongClick: (User) -> Unit,
     painterClicked: (Painter) -> Unit,
     getProfile: (String) -> User?,
-    msg: Message,
+    msg: LocalMessage,
     isUserMe: Boolean,
     isFirstMessageByAuthor: Boolean,
     isLastMessageByAuthor: Boolean,
@@ -390,60 +402,39 @@ fun Message(
     } else {
         MaterialTheme.colors.secondary
     }
+    val author = getProfile(msg.authorDisplayId)!!
 
     @Composable
     fun Photo() {
         if (isLastMessageByAuthor) {
             // Avatar
-            msg.author.getPhotoPainter(chatServer)?.let {
-                LoadImage(
-                    url = it,
-                    error = {
-                        Image(
-                            modifier = Modifier
-                                .clickable(onClick = { onAuthorClick(msg.author) })
-                                .padding(horizontal = 16.dp)
-                                .size(42.dp)
-                                .border(1.5.dp, borderColor, CircleShape)
-                                .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                                .clip(CircleShape),
-                            painter = painterResource(id = R.drawable.ic_broken_cable),
-                            contentScale = ContentScale.Crop,
-                            contentDescription = null,
+            author.photo?.let { chatServer.chatAPI.image(it) }?.let {
+                val context = LocalContext.current
+                Image(
+                    modifier = Modifier
+                        .combinedClickable(
+                            onClick = { onAuthorClick(author) },
+                            onLongClick = { onAuthorLongClick(author) }
                         )
-                    },
-                    loading = {
-                        Image(
-                            modifier = Modifier
-                                .clickable(onClick = { onAuthorClick(msg.author) })
-                                .padding(horizontal = 16.dp)
-                                .size(42.dp)
-                                .border(1.5.dp, borderColor, CircleShape)
-                                .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                                .clip(CircleShape),
-                            painter = painterResource(id = R.drawable.ic_loading),
-                            contentScale = ContentScale.Crop,
-                            contentDescription = null,
-                        )
-                    }
-                ) {
-                    Image(
-                        modifier = Modifier
-                            .clickable(onClick = { onAuthorClick(msg.author) })
-                            .padding(horizontal = 16.dp)
-                            .size(42.dp)
-                            .border(1.5.dp, borderColor, CircleShape)
-                            .border(3.dp, MaterialTheme.colors.surface, CircleShape)
-                            .clip(CircleShape),
-                        painter = it,
-                        contentScale = ContentScale.Crop,
-                        contentDescription = null,
-                    )
-                }
+                        .padding(horizontal = 16.dp)
+                        .size(42.dp)
+                        .border(1.5.dp, borderColor, CircleShape)
+                        .border(3.dp, MaterialTheme.colors.surface, CircleShape)
+                        .clip(CircleShape),
+                    painter = rememberCoilPainter(
+                        request = OkHttpCacheHelper.getCacheFileOrUrl(context, it),
+                        imageLoader = chatServer.imageLoader
+                    ),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null,
+                )
             } ?: run {
                 Image(
                     modifier = Modifier
-                        .clickable(onClick = { onAuthorClick(msg.author) })
+                        .combinedClickable(
+                            onClick = { onAuthorClick(author) },
+                            onLongClick = { onAuthorLongClick(author) }
+                        )
                         .padding(horizontal = 16.dp)
                         .size(42.dp)
                         .border(1.5.dp, borderColor, CircleShape)
@@ -464,6 +455,7 @@ fun Message(
     fun AuthorAndTextMessage(modifier: Modifier) {
         AuthorAndTextMessage(
             msg = msg,
+            author = author,
             isUserMe = isUserMe,
             chatServer = chatServer,
             isFirstMessageByAuthor = isFirstMessageByAuthor,
@@ -482,6 +474,7 @@ fun Message(
         if (isUserMe) {
             AuthorAndTextMessage(
                 Modifier
+                    .padding(start = 16.dp)
                     .weight(1f)
             )
             Photo()
@@ -498,7 +491,8 @@ fun Message(
 
 @Composable
 fun AuthorAndTextMessage(
-    msg: Message,
+    msg: LocalMessage,
+    author: User,
     isUserMe: Boolean,
     chatServer: ChatServer,
     isFirstMessageByAuthor: Boolean,
@@ -512,7 +506,7 @@ fun AuthorAndTextMessage(
     @Composable
     fun Content() {
         if (isLastMessageByAuthor) {
-            AuthorNameTimestamp(msg, isUserMe, msgTimeString)
+            AuthorNameTimestamp(author, isUserMe, msgTimeString)
         }
         ChatItemBubble(
             msg,
@@ -548,7 +542,11 @@ fun AuthorAndTextMessage(
 }
 
 @Composable
-private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: String) {
+private fun AuthorNameTimestamp(
+    author: User,
+    isUserMe: Boolean,
+    msgTimeString: String
+) {
     // Combine author and timestamp for a11y.
     @Composable
     fun RowScope.TimeString() {
@@ -581,7 +579,7 @@ private fun AuthorNameTimestamp(msg: Message, isUserMe: Boolean, msgTimeString: 
             //AuthorName("${msg.author.displayName}(${stringResource(id = R.string.author_me)})")
             AuthorName(stringResource(id = R.string.author_me))
         } else {
-            AuthorName(msg.author.displayName)
+            AuthorName(author.displayName)
             Spacer(modifier = Modifier.width(8.dp))
             TimeString()
         }
@@ -624,7 +622,7 @@ private fun RowScope.DayHeaderLine() {
 
 @Composable
 fun ChatItemBubble(
-    message: Message,
+    message: LocalMessage,
     chatServer: ChatServer,
     lastMessageByAuthor: Boolean,
     getProfile: (String) -> User?,
@@ -662,42 +660,28 @@ fun ChatItemBubble(
     }
     Column {
         if (message.image != null) {
-            message.getImagePainter(chatServer)?.let {
+            val context = LocalContext.current
+            message.image.let { chatServer.chatAPI.image(it) }.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(
                     color = backgroundBubbleColor,
                     shape = bubbleShape
                 ) {
-                    LoadImage(url = it,
-                        loading = {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_loading),
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(160.dp),
-                                contentDescription = stringResource(id = R.string.attached_image)
-                            )
-                        },
-                        error = {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_broken_cable),
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(160.dp),
-                                contentDescription = stringResource(id = R.string.attached_image)
-                            )
-                        }
-                    ) {
-                        Image(
-                            painter = it,
-//                        contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .widthIn(min = 160.dp, max = 240.dp)
-                                .clickable {
-                                    painterClicked(it)
-                                },
-                            contentScale = ContentScale.FillWidth,
-                            contentDescription = stringResource(id = R.string.attached_image)
+                    val painter =
+                        rememberCoilPainter(
+                            request = OkHttpCacheHelper.getCacheFileOrUrl(context, it),
+                            imageLoader = chatServer.imageLoader
                         )
-                    }
+                    Image(
+                        painter = painter,
+                        modifier = Modifier
+                            .widthIn(min = 160.dp, max = 240.dp)
+                            .clickable {
+                                painterClicked(painter)
+                            },
+                        contentScale = ContentScale.FillWidth,
+                        contentDescription = stringResource(id = R.string.attached_image)
+                    )
                 }
             }
         } else {
@@ -717,7 +701,7 @@ fun ChatItemBubble(
 
 @Composable
 fun ClickableMessage(
-    message: Message,
+    message: LocalMessage,
     getProfile: (String) -> User?,
     authorClicked: (User) -> Unit
 ) {
@@ -753,6 +737,8 @@ fun ConversationPreview() {
     }
     val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
     val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    val allProfiles =
+        mapOf(meProfile.displayId to meProfile, otherProfile.displayId to otherProfile)
     val messages =
         listOf(
             Message(1, "卧槽", (System.currentTimeMillis() / 1000).toInt(), null, meProfile),
@@ -777,7 +763,7 @@ fun ConversationPreview() {
                 null,
                 otherProfile
             )
-        )
+        ).map { it.toLocal() }
     JetchatTheme(isDarkTheme = true) {
         val coroutineScope = rememberCoroutineScope()
         ConversationContent(
@@ -786,7 +772,7 @@ fun ConversationPreview() {
             onlineMembers = 2,
             messages = messages,
             navigateToProfile = { },
-            getProfile = { meProfile },
+            getProfile = { allProfiles[it] },
             chatServer = ChatServer(
                 ChatAPI(false, "120.77.179.218", 18080),
                 "uuid",

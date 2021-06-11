@@ -71,7 +71,7 @@ class ProfileFragment : Fragment() {
             val meProfile by chatViewModel.meProfile.observeAsState()
             val context = LocalContext.current
             val updateFailedText = stringResource(id = R.string.update_failed)
-            var editMode by mutableStateOf(false)
+            var editMode by remember { mutableStateOf(false) }
 
             CompositionLocalProvider(LocalWindowInsets provides windowInsets) {
                 JetchatTheme {
@@ -116,7 +116,9 @@ class ProfileFragment : Fragment() {
                                                                 val data = File(outfile).readBytes()
                                                                 val sha256 = data.sha256()
                                                                 if (!ChatServer.current.updateImageCheck(
-                                                                        ChatServer.current.chatAPI.upc(sha256)
+                                                                        ChatServer.current.chatAPI.upc(
+                                                                            sha256
+                                                                        )
                                                                     )
                                                                 ) {
                                                                     val newUser =

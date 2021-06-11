@@ -20,9 +20,10 @@ import tem.csdn.compose.jetchat.dao.MessageDao
 import tem.csdn.compose.jetchat.dao.UserDao
 import tem.csdn.compose.jetchat.data.*
 import tem.csdn.compose.jetchat.model.HeartBeatException
+import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
-import tem.csdn.compose.jetchat.util.MediaFileCacheHelper
+import tem.csdn.compose.jetchat.util.DeviceIdUtil
 import tem.csdn.compose.jetchat.util.UUIDHelper
 import tem.csdn.compose.jetchat.util.client
 import java.util.*
@@ -40,6 +41,7 @@ class ChatViewModel : ViewModel() {
 
     fun updateProfile(user: User) {
         this._meProfile.value = user
+        _allProfiles.value?.set(user.displayId, user)
     }
 
     private var inited = false
@@ -81,9 +83,9 @@ class ChatViewModel : ViewModel() {
                     this@ChatViewModel._allProfiles.value = allUserMap
                     withNewInitProgress(0.1f)
                 }
-                val allMessage = messageDao.getAll().map {
-                    Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
-                    it.toNonLocal(allUserMap)
+                val allMessage = messageDao.getAll().apply {
+                    Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${this}")
+                    //it.toNonLocal(allUserMap)
                 }
                 withContext(Dispatchers.Main) {
                     this@ChatViewModel._allMessages.value =
@@ -104,10 +106,9 @@ class ChatViewModel : ViewModel() {
         inited = true
         Log.i("CSDN_INIT", "app start up initializer start")
         MainScope().launch(Dispatchers.IO) {
-            val uuid = UUIDHelper[context]
+//            val uuid = UUIDHelper[context]
+            val uuid = DeviceIdUtil.getDeviceId(context)!!
             Log.d("CSDN_DEBUG", "uuid=${uuid}")
-            val mediaFileCacheHelper = MediaFileCacheHelper()
-            mediaFileCacheHelper.initDiskLruCache(context, 1)
             val db = Room
                 .databaseBuilder(context, AppDatabase::class.java, "database-csdn-android")
                 .build()
@@ -131,6 +132,7 @@ class ChatViewModel : ViewModel() {
                     _webSocketStatus.value = it
                 }
             }
+            chatServer.initContext(context)
             withContext(Dispatchers.Main) {
                 _chatServer.value = chatServer
                 Log.d("CSDN_UPDATE", "update chatServer success")
@@ -174,9 +176,9 @@ class ChatViewModel : ViewModel() {
                 this@ChatViewModel._allProfiles.value = allUserMap
                 withNewInitProgress(0.1f)
             }
-            val allMessage = messageDao.getAll().map {
-                Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${it}")
-                it.toNonLocal(allUserMap)
+            val allMessage = messageDao.getAll().apply {
+                Log.d("CSDN_DEBUG_MESSAGES_DAO", "msg->${this}")
+//                it.toNonLocal(allUserMap)
             }
             var lastHeartBeatUUIDString: String? = null
             launch {
@@ -244,13 +246,16 @@ class ChatViewModel : ViewModel() {
                     try {
                         rawWebSocketFrameWrapper.ifTextWrapper(chatServer.objectMapper) {
                             when (it.type) {
+                                TextWebSocketFrameWrapper.FrameType.IMAGE_MESSAGE,
                                 TextWebSocketFrameWrapper.FrameType.TEXT_MESSAGE -> {
                                     val msg =
                                         chatServer.objectMapper.convertValue<Message>(it.content!!)
                                     Log.d("CSDN_DEBUG_RECEIVE", "new msg:${msg}")
-                                    messageDao.update(msg.toLocal())
-                                    withContext(Dispatchers.Main) {
-                                        _allMessages.value?.add(0, msg)
+                                    msg.toLocal().let {
+                                        messageDao.update(it)
+                                        withContext(Dispatchers.Main) {
+                                            _allMessages.value?.add(0, it)
+                                        }
                                     }
                                 }
                                 TextWebSocketFrameWrapper.FrameType.NEW_CONNECTION -> {
@@ -333,7 +338,7 @@ class ChatViewModel : ViewModel() {
     private val _initProgress = MutableLiveData<Float>()
     private val _initProgressTextId = MutableLiveData<Int>()
     private val _onlineMembers = MutableLiveData<Int>()
-    private val _allMessages = MutableLiveData<MutableList<Message>>()
+    private val _allMessages = MutableLiveData<MutableList<LocalMessage>>()
     private val _allProfiles = MutableLiveData<MutableMap<String, User>>()
     private val _webSocketStatus = MutableLiveData<Boolean>()
     private val _chatServer = MutableLiveData<ChatServer>()
@@ -342,7 +347,7 @@ class ChatViewModel : ViewModel() {
     val chatData: LiveData<ChatDataScreenState> = _chatData
     val initProgress: LiveData<Float> = _initProgress
     val initProgressTextId: LiveData<Int> = _initProgressTextId
-    val allMessages: LiveData<MutableList<Message>> = _allMessages
+    val allMessages: LiveData<MutableList<LocalMessage>> = _allMessages
     val allProfiles: LiveData<MutableMap<String, User>> = _allProfiles
     val onlineMembers: LiveData<Int> = _onlineMembers
     val webSocketStatus: LiveData<Boolean> = _webSocketStatus

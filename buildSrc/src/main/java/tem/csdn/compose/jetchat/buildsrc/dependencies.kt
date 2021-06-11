@@ -5,7 +5,7 @@ object Versions {
 }
 
 object Libs {
-    const val androidGradlePlugin = "com.android.tools.build:gradle:7.1.0-alpha01"
+    const val androidGradlePlugin = "com.android.tools.build:gradle:7.1.0-alpha02"
     const val jdkDesugar = "com.android.tools:desugar_jdk_libs:1.0.9"
 
     const val junit = "junit:junit:4.13"
@@ -16,8 +16,10 @@ object Libs {
     const val tiny = "com.zxy.android:tiny:1.1.0"
 
     object Accompanist {
-        private const val version = "0.11.0"
+        private const val version = "0.11.1"
         const val insets = "com.google.accompanist:accompanist-insets:$version"
+        const val coil = "com.google.accompanist:accompanist-coil:$version"
+        const val coil_gif = "io.coil-kt:coil-gif:1.2.2"
     }
 
     object Kotlin {
