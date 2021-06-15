@@ -35,6 +35,7 @@ import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
+import tem.csdn.compose.jetchat.sendWithUPC
 import tem.csdn.compose.jetchat.util.sha256
 import java.io.File
 
@@ -67,7 +68,7 @@ class ProfileFragment : Fragment() {
 
         setContent {
             val userData by viewModel.userData.observeAsState()
-            val chatServer by chatViewModel.chatServer.observeAsState()
+            val chatServer = ChatServer.getCurrent()
             val meProfile by chatViewModel.meProfile.observeAsState()
             val context = LocalContext.current
             val updateFailedText = stringResource(id = R.string.update_failed)
@@ -114,15 +115,16 @@ class ProfileFragment : Fragment() {
                                                         MainScope().launch(Dispatchers.IO) {
                                                             try {
                                                                 val data = File(outfile).readBytes()
+                                                                data.sendWithUPC(chatServer)
                                                                 val sha256 = data.sha256()
-                                                                if (!ChatServer.current.updateImageCheck(
-                                                                        ChatServer.current.chatAPI.upc(
+                                                                if (!chatServer.updateImageCheck(
+                                                                        chatServer.chatAPI.upc(
                                                                             sha256
                                                                         )
                                                                     )
                                                                 ) {
                                                                     val newUser =
-                                                                        ChatServer.current.updateProfilePhoto(
+                                                                        chatServer.updateProfilePhoto(
                                                                             data,
                                                                             File(outfile).name
                                                                         )
@@ -201,12 +203,12 @@ class ProfileFragment : Fragment() {
                             onNavIconPressed = {
                                 activityViewModel.openDrawer()
                             },
-                            chatServer = chatServer!!,
+                            chatServer = chatServer,
                             editMode = editMode,
                             onEditSubmit = { user ->
                                 MainScope().launch(Dispatchers.IO) {
                                     try {
-                                        val newUser = chatServer!!.updateProfile(user)
+                                        val newUser = chatServer.updateProfile(user)
                                         chatViewModel.userDao.update(newUser)
                                         withContext(Dispatchers.Main) {
                                             chatViewModel.updateProfile(newUser)

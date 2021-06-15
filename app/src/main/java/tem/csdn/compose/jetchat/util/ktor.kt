@@ -140,7 +140,7 @@ suspend fun DefaultClientWebSocketSession.trySend(
             )
         )
     }
-    rawWebSocketFrameWrapper.ifBinary(objectMapper) {
+    rawWebSocketFrameWrapper.ifBinary() {
         error = sendRetry(Frame.Binary(true, it))
     }
     return if (error != null) {

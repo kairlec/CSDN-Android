@@ -524,7 +524,7 @@ fun ProfileFab(
 @Composable
 fun ConvPreviewLandscapeMeDefault() {
     val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
-    val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    //val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
     ProvideWindowInsets(consumeWindowInsets = false) {
         JetchatTheme {
             ProfileScreen(meProfile, meProfile, null, true, {}, {}, {})
@@ -536,7 +536,7 @@ fun ConvPreviewLandscapeMeDefault() {
 @Composable
 fun ConvPreviewLandscapeMeDefaultDark() {
     val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
-    val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    //val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
     ProvideWindowInsets(consumeWindowInsets = false) {
         JetchatTheme(isDarkTheme = true) {
             ProfileScreen(meProfile, meProfile, null, true, {}, {}, {})
@@ -560,7 +560,7 @@ fun ConvPreviewLandscapeOtherDefault() {
 @Composable
 fun ConvPreviewLandscapeMeShowOnly() {
     val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
-    val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
+    //val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
     ProvideWindowInsets(consumeWindowInsets = false) {
         JetchatTheme {
             ProfileScreen(meProfile, meProfile, null, false, {}, {}, {})

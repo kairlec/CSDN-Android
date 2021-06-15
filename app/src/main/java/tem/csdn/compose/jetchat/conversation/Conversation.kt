@@ -253,9 +253,9 @@ fun Messages(
                 .fillMaxSize()
         ) {
             var nextDraw = false
-            for (index in messages.indices) {
-                val prevMessage = messages.getOrNull(index - 1)
-                val nextMessage = messages.getOrNull(index + 1)
+            for (index in messages.indices.reversed()) {
+                val prevMessage = messages.getOrNull(index + 1)
+                val nextMessage = messages.getOrNull(index - 1)
                 val content = messages[index]
                 val isFirstMessageByAuthor = prevMessage?.authorDisplayId != content.authorDisplayId
                 val isLastMessageByAuthor = nextMessage?.authorDisplayId != content.authorDisplayId
@@ -735,6 +735,7 @@ fun ClickableMessage(
 fun ConversationPreview() {
     val client = HttpClient {
     }
+    val context = LocalContext.current
     val meProfile = User("abcd", "Kairlec", "KairlecD", "", null, null, null, null)
     val otherProfile = User("abcde", "KairlecB", "KairlecO", "", null, null, null, null)
     val allProfiles =
@@ -765,7 +766,7 @@ fun ConversationPreview() {
             )
         ).map { it.toLocal() }
     JetchatTheme(isDarkTheme = true) {
-        val coroutineScope = rememberCoroutineScope()
+        @Suppress("DEPRECATION_ERROR")
         ConversationContent(
             chatData = ChatDataScreenState("SCN105NBTest"),
             chatServerOffline = false,
@@ -774,12 +775,11 @@ fun ConversationPreview() {
             navigateToProfile = { },
             getProfile = { allProfiles[it] },
             chatServer = ChatServer(
+                context,
                 ChatAPI(false, "120.77.179.218", 18080),
                 "uuid",
                 client,
-                null,
-                coroutineScope
-            ) { },
+            ),
             meProfile = meProfile,
             painterClicked = {},
             onImageSelect = {},

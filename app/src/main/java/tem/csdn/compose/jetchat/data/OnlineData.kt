@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
@@ -17,14 +18,12 @@ import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
-import okhttp3.Cache
 import okhttp3.OkHttpClient
 import tem.csdn.compose.jetchat.R
 import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.util.*
-import java.io.File
 import java.lang.Exception
 
 class ChatServerInitException(
@@ -33,49 +32,92 @@ class ChatServerInitException(
     override val cause: Throwable? = null
 ) : Exception(message, cause)
 
-class ChatServer(
+class ChatServer @Deprecated(
+    "should use current to get instance",
+    ReplaceWith("ChatServer.current"), DeprecationLevel.ERROR
+) constructor(
+    context: Context,
     val chatAPI: ChatAPI,
     val id: String,
     private val client: HttpClient,
-    private val lastMessageId: Long?,
-    coroutineScope: CoroutineScope,
-    val onWebSocketEvent: suspend (Boolean) -> Unit
 ) {
     companion object {
-        lateinit var current: ChatServer
-            private set
-            @get:Composable
-            get
+        private fun getUUID(context: Context) =
+            DeviceIdUtil.getDeviceId(context)!!.apply { Log.d("CSDN_DEBUG", "uuid=${this}") }
+
+        private val chatAPI = ChatAPI(false, "120.77.179.218", 18080)
+
+        private lateinit var current: ChatServer
+
+        @Composable
+        @Suppress("DEPRECATION_ERROR")
+        fun getCurrent(): ChatServer {
+            if (!this::current.isInitialized) {
+                val context = LocalContext.current
+                current = ChatServer(
+                    context,
+                    chatAPI,
+                    getUUID(context),
+                    client,
+                )
+            }
+            return current
+        }
+
+        fun getInitedCurrent(): ChatServer? {
+            return if (!this::current.isInitialized) {
+                null
+            } else {
+                current
+            }
+        }
+
+        @Suppress("DEPRECATION_ERROR")
+        fun getCurrent(context: Context): ChatServer {
+            Log.d("CSDN_DEBUG", "ready to create chatServer")
+            if (!this::current.isInitialized) {
+                current = ChatServer(
+                    context,
+                    chatAPI,
+                    getUUID(context),
+                    client,
+                )
+            }
+            return current
+        }
     }
 
-    lateinit var imageLoader: ImageLoader
-        private set
-
-    fun initContext(context: Context) {
-        imageLoader = ImageLoader.Builder(context)
-            .crossfade(true)
-            .error(R.drawable.ic_broken_cable)
-            .placeholder(R.drawable.ic_loading)
-            .availableMemoryPercentage(0.7)
-            .bitmapPoolPercentage(0.7)
-            .allowRgb565(true)
-            .componentRegistry {
-                if (Build.VERSION.SDK_INT >= 28) {
-                    add(ImageDecoderDecoder(context))
-                } else {
-                    add(GifDecoder())
-                }
-                add(CoilByteArrayFetcher())
+    val imageLoader: ImageLoader = ImageLoader.Builder(context)
+        .crossfade(true)
+        .error(R.drawable.ic_broken_cable)
+        .placeholder(R.drawable.ic_loading)
+        .availableMemoryPercentage(0.7)
+        .bitmapPoolPercentage(0.7)
+        .allowRgb565(true)
+        .componentRegistry {
+            if (Build.VERSION.SDK_INT >= 28) {
+                add(ImageDecoderDecoder(context))
+            } else {
+                add(GifDecoder())
             }
-            .okHttpClient {
-                OkHttpClient.Builder()
-                    .cache(OkHttpCacheHelper.getCache(context))
-                    .build()
-            }
-            .build()
-    }
+            add(CoilByteArrayFetcher())
+        }
+        .okHttpClient {
+            OkHttpClient.Builder()
+                .cache(OkHttpCacheHelper.getCache(context))
+                .build()
+        }
+        .build()
 
     val objectMapper = jacksonObjectMapper()
+
+    private lateinit var coroutineScope: CoroutineScope
+
+    fun init(coroutineScope: CoroutineScope) {
+        if (!this::coroutineScope.isInitialized) {
+            this.coroutineScope = coroutineScope
+        }
+    }
 
     // 这个锁用来保持WebSocket不会被关闭,防止提前关闭输出导致需要重新连接
     private val webSocketKeepAliveMutex = Mutex()
@@ -145,7 +187,7 @@ class ChatServer(
         }
     }
 
-    suspend fun getMessages(): List<Message> {
+    suspend fun getMessages(lastMessageId: Long?): List<Message> {
         return client.get<Result<List<Message>>>(chatAPI.messages()) {
             if (lastMessageId != null) {
                 parameter("after_id", lastMessageId)
@@ -156,6 +198,7 @@ class ChatServer(
     }
 
     suspend fun connect(
+        onWebSocketEvent: suspend CoroutineScope.(Boolean) -> Unit,
         onConnect: suspend DefaultClientWebSocketSession.() -> Unit,
         onDisconnect: suspend () -> Unit
     ) {
@@ -197,13 +240,15 @@ class ChatServer(
                 }
                 Log.d("CSDN_DEBUG", "start input listen")
                 inputReservableActor.startAll()
-                onWebSocketEvent(true)
+                onWebSocketEvent(coroutineScope, true)
+                Log.d("CSDN_DEBUG_WEBSOCKET_STATUS", "status = true")
                 onConnect(wsSession)
             },
             onDisconnected = {
                 Log.d("CSDN_DEBUG", "disconnect,pause receive Handelr")
                 inputReservableActor.pauseReceiveHandler()
-                onWebSocketEvent(false)
+                onWebSocketEvent(coroutineScope, false)
+                Log.d("CSDN_DEBUG_WEBSOCKET_STATUS", "status = false")
                 onDisconnect()
             }
         )
@@ -212,11 +257,6 @@ class ChatServer(
 
     suspend fun send(rawWebSocketFrameWrapper: RawWebSocketFrameWrapper<*>) {
         inputReservableActor.send(rawWebSocketFrameWrapper)
-    }
-
-
-    init {
-        current = this
     }
 }
 

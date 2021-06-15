@@ -69,7 +69,6 @@ suspend fun RawWebSocketFrameWrapper<*>.ifTextWrapper(
 }
 
 suspend fun RawWebSocketFrameWrapper<*>.ifBinary(
-    objectMapper: ObjectMapper,
     event: suspend (ByteArray) -> Unit
 ) {
     if (type == RawWebSocketFrameWrapper.RawFrameType.BINARY) {

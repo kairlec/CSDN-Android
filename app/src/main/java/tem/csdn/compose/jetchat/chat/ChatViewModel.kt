@@ -23,9 +23,6 @@ import tem.csdn.compose.jetchat.model.HeartBeatException
 import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
-import tem.csdn.compose.jetchat.util.DeviceIdUtil
-import tem.csdn.compose.jetchat.util.UUIDHelper
-import tem.csdn.compose.jetchat.util.client
 import java.util.*
 
 class ChatViewModel : ViewModel() {
@@ -55,12 +52,14 @@ class ChatViewModel : ViewModel() {
         reloading = true
         try {
             coroutineScope {
-                val count = chatServer.value!!.getOnlineNumber()
+                val chatServer = ChatServer.getInitedCurrent()!!
+                val count = chatServer.getOnlineNumber()
                 withContext(Dispatchers.Main) {
                     _onlineMembers.value = count
                     Log.d("CSDN_UPDATE", "reload online members success")
                 }
-                val newMessages = chatServer.value!!.getMessages().map { it.toLocal() }
+                val newMessages =
+                    chatServer.getMessages(messageDao.getLast()?.id).map { it.toLocal() }
                 withContext(Dispatchers.Main) {
                     withNewInitProgress(0.1f)
                 }
@@ -68,7 +67,7 @@ class ChatViewModel : ViewModel() {
                 withContext(Dispatchers.Main) {
                     withNewInitProgress(0.1f)
                 }
-                val newProfiles = chatServer.value!!.getProfiles()
+                val newProfiles = chatServer.getProfiles()
                 withContext(Dispatchers.Main) {
                     withNewInitProgress(0.1f)
                 }
@@ -106,35 +105,18 @@ class ChatViewModel : ViewModel() {
         inited = true
         Log.i("CSDN_INIT", "app start up initializer start")
         MainScope().launch(Dispatchers.IO) {
-//            val uuid = UUIDHelper[context]
-            val uuid = DeviceIdUtil.getDeviceId(context)!!
-            Log.d("CSDN_DEBUG", "uuid=${uuid}")
             val db = Room
                 .databaseBuilder(context, AppDatabase::class.java, "database-csdn-android")
                 .build()
             messageDao = db.messageDao()
-            val lastMessage = messageDao.getLast()
             userDao = db.userDao()
             withContext(Dispatchers.Main) {
                 withNewInitProgress(0.1f)
             }
-            val chatAPI = ChatAPI(false, "120.77.179.218", 18080)
             Log.d("CSDN_DEBUG", "ready to create chatServer")
-            val chatServer = ChatServer(
-                chatAPI,
-                uuid,
-                client,
-                lastMessage?.id,
-                this
-            ) {
-                Log.d("CSDN_DEBUG_WEBSOCKET_STATUS", "status = $it")
-                withContext(Dispatchers.Main) {
-                    _webSocketStatus.value = it
-                }
-            }
-            chatServer.initContext(context)
+            val chatServer = ChatServer.getCurrent(context)
+            chatServer.init(this)
             withContext(Dispatchers.Main) {
-                _chatServer.value = chatServer
                 Log.d("CSDN_UPDATE", "update chatServer success")
                 withNewInitProgress(0.1f, R.string.wait_for_server_sync)
             }
@@ -154,7 +136,7 @@ class ChatViewModel : ViewModel() {
                 Log.d("CSDN_UPDATE", "update online members success")
                 withNewInitProgress(0.1f)
             }
-            val newMessages = chatServer.getMessages().map { it.toLocal() }
+            val newMessages = chatServer.getMessages(messageDao.getLast()?.id).map { it.toLocal() }
             withContext(Dispatchers.Main) {
                 withNewInitProgress(0.1f)
             }
@@ -186,33 +168,38 @@ class ChatViewModel : ViewModel() {
                 while (isActive) {
                     try {
                         chatServer.connect({
-                            Log.d("CSDN_DEBUG", "server has connect,start to heartbeat")
-                            heartBeatJob = launch {
-                                while (isActive) {
-                                    if (lastHeartBeatUUIDString != null) {
-                                        val exp = HeartBeatException.HeartBeatTimeoutException()
-                                        close(
-                                            CloseReason(
-                                                CloseReason.Codes.CANNOT_ACCEPT,
-                                                exp.toString()
-                                            )
-                                        )
-                                        break
-                                    }
-                                    lastHeartBeatUUIDString = UUID.randomUUID().toString()
-                                    Log.d("CSDN_HEARTBEAT", "New Heartbeat")
-                                    chatServer.send(
-                                        RawWebSocketFrameWrapper.ofTextWrapper(
-                                            TextWebSocketFrameWrapper.ofHeartbeat(
-                                                lastHeartBeatUUIDString!!
-                                            )
-                                        )
-                                    )
-                                    //30s心跳一次
-                                    delay(30_000)
-                                }
+                            withContext(Dispatchers.Main) {
+                                _webSocketStatus.value = it
                             }
-                        }) {
+                        },
+                            {
+                                Log.d("CSDN_DEBUG", "server has connect,start to heartbeat")
+                                heartBeatJob = launch {
+                                    while (isActive) {
+                                        if (lastHeartBeatUUIDString != null) {
+                                            val exp = HeartBeatException.HeartBeatTimeoutException()
+                                            close(
+                                                CloseReason(
+                                                    CloseReason.Codes.CANNOT_ACCEPT,
+                                                    exp.toString()
+                                                )
+                                            )
+                                            break
+                                        }
+                                        lastHeartBeatUUIDString = UUID.randomUUID().toString()
+                                        Log.d("CSDN_HEARTBEAT", "New Heartbeat")
+                                        chatServer.send(
+                                            RawWebSocketFrameWrapper.ofTextWrapper(
+                                                TextWebSocketFrameWrapper.ofHeartbeat(
+                                                    lastHeartBeatUUIDString!!
+                                                )
+                                            )
+                                        )
+                                        //30s心跳一次
+                                        delay(30_000)
+                                    }
+                                }
+                            }) {
                             Log.d("CSDN_DEBUG", "websocket has disconnect,stop heartbeat job")
                             heartBeatJob?.cancel()
                             lastHeartBeatUUIDString = null
@@ -254,7 +241,7 @@ class ChatViewModel : ViewModel() {
                                     msg.toLocal().let {
                                         messageDao.update(it)
                                         withContext(Dispatchers.Main) {
-                                            _allMessages.value?.add(0, it)
+                                            _allMessages.value?.add(it)
                                         }
                                     }
                                 }
@@ -320,7 +307,7 @@ class ChatViewModel : ViewModel() {
                                 }
                             }
                         }
-                        rawWebSocketFrameWrapper.ifBinary(chatServer.objectMapper) {
+                        rawWebSocketFrameWrapper.ifBinary() {
                             //TODO 保留
                         }
                         rawWebSocketFrameWrapper.ifRawText {
@@ -341,7 +328,6 @@ class ChatViewModel : ViewModel() {
     private val _allMessages = MutableLiveData<MutableList<LocalMessage>>()
     private val _allProfiles = MutableLiveData<MutableMap<String, User>>()
     private val _webSocketStatus = MutableLiveData<Boolean>()
-    private val _chatServer = MutableLiveData<ChatServer>()
     private val _meProfile = MutableLiveData<User>()
 
     val chatData: LiveData<ChatDataScreenState> = _chatData
@@ -351,7 +337,6 @@ class ChatViewModel : ViewModel() {
     val allProfiles: LiveData<MutableMap<String, User>> = _allProfiles
     val onlineMembers: LiveData<Int> = _onlineMembers
     val webSocketStatus: LiveData<Boolean> = _webSocketStatus
-    val chatServer: LiveData<ChatServer> = _chatServer
     val meProfile: LiveData<User> = _meProfile
 }
 

@@ -140,7 +140,7 @@ private fun ChatItem(
             Icon(
                 painter = rememberCoilPainter(
                     request = OkHttpCacheHelper.getCacheFileOrUrl(context, chatPhoto),
-                    imageLoader = ChatServer.current.imageLoader
+                    imageLoader = ChatServer.getCurrent().imageLoader
                 ),
                 contentDescription = null,
                 tint = iconTint,
@@ -178,7 +178,7 @@ private fun ProfileItem(text: String, profilePic: String?, onProfileClicked: () 
                 Image(
                     painter = rememberCoilPainter(
                         request = OkHttpCacheHelper.getCacheFileOrUrl(context, profilePic),
-                        imageLoader = ChatServer.current.imageLoader
+                        imageLoader = ChatServer.getCurrent().imageLoader
                     ),
                     modifier = widthPaddingModifier.then(Modifier.clip(CircleShape)),
                     contentScale = ContentScale.Crop,

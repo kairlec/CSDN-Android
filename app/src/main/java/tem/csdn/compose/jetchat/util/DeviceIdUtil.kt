@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package tem.csdn.compose.jetchat.util
 
 import android.annotation.SuppressLint

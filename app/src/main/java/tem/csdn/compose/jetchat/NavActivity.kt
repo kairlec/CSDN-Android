@@ -1,6 +1,9 @@
 package tem.csdn.compose.jetchat
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.Parcelable
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -22,15 +25,15 @@ import androidx.core.os.bundleOf
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
+import com.google.accompanist.insets.ProvideWindowInsets
+import kotlinx.coroutines.launch
+import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.components.JetchatScaffold
 import tem.csdn.compose.jetchat.conversation.BackPressHandler
 import tem.csdn.compose.jetchat.conversation.LocalBackPressedDispatcher
+import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.databinding.ContentMainBinding
-import com.google.accompanist.insets.ProvideWindowInsets
-import kotlinx.coroutines.*
-import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.theme.JetchatTheme
-import tem.csdn.compose.jetchat.theme.elevatedSurface
 
 
 /**
@@ -39,6 +42,13 @@ import tem.csdn.compose.jetchat.theme.elevatedSurface
 class NavActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     private val chatViewModel: ChatViewModel by viewModels()
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.getParcelableExtra<Parcelable>(SendIntent.IMAGE_URI)?.let { it as? Uri }?.let {
+            sendImage(this, it, {}, {})
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,7 +103,7 @@ class NavActivity : AppCompatActivity() {
                             }
                         }
 
-                        val chatServer by chatViewModel.chatServer.observeAsState()
+                        val chatServer = ChatServer.getCurrent()
                         val chatServerOnline by chatViewModel.webSocketStatus.observeAsState(false)
                         Log.d("CSDN_CON", "main:chatServer=${chatServer}")
                         JetchatScaffold(
@@ -114,7 +124,7 @@ class NavActivity : AppCompatActivity() {
                             },
                             chat = chatData!!,
                             profiles = profiles.values,
-                            chatServer = chatServer!!,
+                            chatServer = chatServer,
                             chatServerOffline = !chatServerOnline,
                             meProfile = meProfile!!
                         ) {
@@ -137,6 +147,13 @@ class NavActivity : AppCompatActivity() {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         return navHostFragment.navController
+    }
+
+    override fun onBackPressed() {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        intent.addCategory(Intent.CATEGORY_HOME)
+        startActivity(intent)
     }
 }
 

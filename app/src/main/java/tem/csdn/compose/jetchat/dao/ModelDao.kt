@@ -28,7 +28,7 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE id=(SELECT max(id) FROM messages)")
     fun getLast(): LocalMessage?
 
-    @Query("SELECT * FROM messages ORDER BY id DESC")
+    @Query("SELECT * FROM messages ORDER BY id")
     fun getAll(): List<LocalMessage>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

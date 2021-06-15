@@ -1,21 +1,7 @@
 package tem.csdn.compose.jetchat
 
 import android.content.Context
-import android.util.Log
-import androidx.activity.viewModels
-import androidx.room.Room
 import androidx.startup.Initializer
-import com.zxy.tiny.Tiny
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import tem.csdn.compose.jetchat.chat.ChatAPI
-import tem.csdn.compose.jetchat.chat.ChatViewModel
-import tem.csdn.compose.jetchat.dao.AppDatabase
-import tem.csdn.compose.jetchat.data.ChatServer
-import tem.csdn.compose.jetchat.util.UUIDHelper
-import tem.csdn.compose.jetchat.util.client
 
 class AppStartupInitializer : Initializer<Unit> {
 
