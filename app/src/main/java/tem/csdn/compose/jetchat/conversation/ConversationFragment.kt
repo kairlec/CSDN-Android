@@ -330,7 +330,7 @@ class ConversationFragment : Fragment() {
                                     }
                                     uploadConfirm = null
                                 }) {
-                                Text(text = "发送", style = textStyle)
+                                Text(text = stringResource(id = R.string.send), style = textStyle)
                             }
                         }
                     }
