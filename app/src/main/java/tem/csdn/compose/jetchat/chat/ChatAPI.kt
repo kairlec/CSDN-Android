@@ -23,8 +23,12 @@ class ChatAPI(val ssl: Boolean, val host: String, val port: Int? = null) : Seria
         return "${baseUrl}/upc/${sha256}"
     }
 
-    fun profilePhoto(): String {
-        return "${baseUrl}/photo"
+    fun profilePhoto(sha256: String?): String {
+        return if (sha256 == null) {
+            "${baseUrl}/photo"
+        } else {
+            "${baseUrl}/photo/${sha256}"
+        }
     }
 
     fun messages(): String {

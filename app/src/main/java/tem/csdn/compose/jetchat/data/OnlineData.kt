@@ -111,11 +111,20 @@ class ChatServer(
 
     suspend fun updateProfilePhoto(byteArray: ByteArray, filename: String? = null): User {
         return client.submitFormWithBinaryData<Result<User>> {
-            url(chatAPI.profilePhoto())
+            url(chatAPI.profilePhoto(null))
             method = HttpMethod.Post
             body = MultiPartContent.build {
                 add("avatar", byteArray, filename = filename)
             }
+        }.checked().data!!.apply {
+            Log.d("CSDN_DEBUG", "update profile:${this}")
+        }
+    }
+
+    suspend fun updateProfilePhoto(sha256: String): User {
+        return client.submitFormWithBinaryData<Result<User>> {
+            url(chatAPI.profilePhoto(sha256))
+            method = HttpMethod.Post
         }.checked().data!!.apply {
             Log.d("CSDN_DEBUG", "update profile:${this}")
         }

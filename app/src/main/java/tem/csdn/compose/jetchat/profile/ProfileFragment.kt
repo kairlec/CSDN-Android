@@ -136,6 +136,21 @@ class ProfileFragment : Fragment() {
                                                                         viewModel.setProfile(newUser)
                                                                         editMode = false
                                                                     }
+                                                                } else {
+                                                                    val newUser =
+                                                                        ChatServer.current.updateProfilePhoto(
+                                                                            sha256
+                                                                        )
+                                                                    chatViewModel.userDao.update(
+                                                                        newUser
+                                                                    )
+                                                                    withContext(Dispatchers.Main) {
+                                                                        chatViewModel.updateProfile(
+                                                                            newUser
+                                                                        )
+                                                                        viewModel.setProfile(newUser)
+                                                                        editMode = false
+                                                                    }
                                                                 }
                                                             } catch (e: Throwable) {
                                                                 withContext(Dispatchers.Main) {
