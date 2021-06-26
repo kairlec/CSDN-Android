@@ -39,6 +39,8 @@ import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.util.OkHttpCacheHelper
 
+// region 陈卡 用户首页显示设计
+
 @Composable
 fun ProfileScreen(
     userData: User,
@@ -568,26 +570,6 @@ fun ConvPreviewLandscapeMeShowOnly() {
     }
 }
 
-//@Preview(widthDp = 360, heightDp = 480)
-//@Composable
-//fun ConvPreviewPortraitMeDefault() {
-//    ProvideWindowInsets(consumeWindowInsets = false) {
-//        JetchatTheme {
-//            ProfileScreen(meProfile, ChatAPI(""))
-//        }
-//    }
-//}
-
-//@Preview(widthDp = 360, heightDp = 480)
-//@Composable
-//fun ConvPreviewPortraitOtherDefault() {
-//    ProvideWindowInsets(consumeWindowInsets = false) {
-//        JetchatTheme {
-//            ProfileScreen(colleagueProfile,ChatAPI(""))
-//        }
-//    }
-//}
-
 @Preview
 @Composable
 fun ProfileFabPreview() {
@@ -597,3 +579,5 @@ fun ProfileFabPreview() {
         }
     }
 }
+
+//endregion

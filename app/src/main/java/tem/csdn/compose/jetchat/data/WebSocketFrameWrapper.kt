@@ -3,30 +3,63 @@ package tem.csdn.compose.jetchat.data
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 
+/**
+ * 原始的WebSocket帧包装器
+ * 这个帧包装器是给消费者队列来使用的
+ * 让消费者队列接受到之后去判断需要怎样去发送到服务器
+ * 但是这个包装器不参与实际传输,实际传输的是Binary或者TextFrameWrapper
+ */
 data class RawWebSocketFrameWrapper<T : Any> private constructor(
     val type: RawFrameType,
     val content: T
 ) {
     enum class RawFrameType {
+        /**
+         * 表示当前包装器内容是文本
+         */
         TEXT,
+
+        /**
+         * 表示当前包装器内容是二进制数据
+         */
         BINARY,
+
+        /**
+         * 表示当前包装器内容是图片文本,既图片的SHA256值
+         */
         IMAGE_TEXT,
+
+        /**
+         * 表示当前的包装器内容是文本包装器
+         */
         TEXT_WRAPPER,
     }
 
     companion object {
+        /**
+         * 根据ByteArray构建一个二进制原始帧包装器
+         */
         fun ofBinary(content: ByteArray): RawWebSocketFrameWrapper<ByteArray> {
             return RawWebSocketFrameWrapper(RawFrameType.BINARY, content)
         }
 
+        /**
+         * 根据sha256构建一个图片文本原始帧包装器
+         */
         fun ofImageText(content: String): RawWebSocketFrameWrapper<String> {
             return RawWebSocketFrameWrapper(RawFrameType.IMAGE_TEXT, content)
         }
 
+        /**
+         * 根据文本构建一个文本原始帧包装器
+         */
         fun ofText(content: String): RawWebSocketFrameWrapper<String> {
             return RawWebSocketFrameWrapper(RawFrameType.TEXT, content)
         }
 
+        /**
+         * 根据文本包装器构建一个原始帧包装器
+         */
         fun ofTextWrapper(content: TextWebSocketFrameWrapper): RawWebSocketFrameWrapper<TextWebSocketFrameWrapper> {
             return RawWebSocketFrameWrapper(RawFrameType.TEXT_WRAPPER, content)
         }
@@ -77,6 +110,11 @@ suspend fun RawWebSocketFrameWrapper<*>.ifBinary(
     }
 }
 
+/**
+ * 文本帧包装器
+ * 这个帧包装器参与实际传输
+ * 传输的时候是要转为json去与服务器进行通讯
+ */
 data class TextWebSocketFrameWrapper private constructor(
     val type: FrameType,
     val content: Any?

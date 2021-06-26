@@ -3,7 +3,10 @@ package tem.csdn.compose.jetchat.util
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-
+//region 待定 暂停器设计
+/**
+ * suspend风格的暂停器
+ */
 class SuspendWait(private val owner: Any? = null, locked: Boolean = false) {
     private val mutex = Mutex(locked = locked)
     private var onPauseHandler: ((Throwable?) -> Unit)? = null
@@ -40,3 +43,4 @@ class SuspendWait(private val owner: Any? = null, locked: Boolean = false) {
         onResumeHandler = handler
     }
 }
+// endregion

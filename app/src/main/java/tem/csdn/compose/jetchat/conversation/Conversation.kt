@@ -82,7 +82,6 @@ import java.time.OffsetDateTime
  */
 @Composable
 fun ConversationContent(
-//    uiState: ConversationUiState,
     chatData: ChatDataScreenState,
     chatServerOffline: Boolean,
     onlineMembers: Int,
@@ -788,20 +787,20 @@ fun ConversationPreview() {
         )
     }
 }
-//
-//@Preview
-//@Composable
-//fun channelBarPrev() {
-//    JetchatTheme {
-//        ChannelNameBar(channelName = "composers", channelMembers = 52)
-//    }
-//}
-//
-//@Preview
-//@Composable
-//fun DayHeaderPrev() {
-//    DayHeader("Aug 6")
-//}
+
+@Preview
+@Composable
+fun ChannelBarPrev() {
+    JetchatTheme {
+        ChannelNameBar(channelName = "composers", channelMembers = 52)
+    }
+}
+
+@Preview
+@Composable
+fun DayHeaderPrev() {
+    DayHeader("6月")
+}
 
 private val JumpToBottomThreshold = 56.dp
 

@@ -31,7 +31,6 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tem.csdn.compose.jetchat.R
-import tem.csdn.compose.jetchat.chat.ChatAPI
 import tem.csdn.compose.jetchat.chat.ChatViewModel
 import tem.csdn.compose.jetchat.data.ChatServer
 import tem.csdn.compose.jetchat.model.User
@@ -67,7 +66,6 @@ class ProfileFragment : Fragment() {
 
         setContent {
             val userData by viewModel.userData.observeAsState()
-            val chatServer by chatViewModel.chatServer.observeAsState()
             val meProfile by chatViewModel.meProfile.observeAsState()
             val context = LocalContext.current
             val updateFailedText = stringResource(id = R.string.update_failed)
@@ -84,6 +82,10 @@ class ProfileFragment : Fragment() {
 
                     var retryEvent: (() -> Unit)? = null
 
+                    // region 丁钰 个人信息图片发送
+                    /**
+                     * 选择图片的启动器
+                     */
                     val launcher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.GetContent()
                     ) { uri: Uri? ->
@@ -94,6 +96,8 @@ class ProfileFragment : Fragment() {
                                         context.contentResolver.openInputStream(uri)?.use {
                                             it.readBytes()
                                         }?.let {
+                                            // 先进行压缩,个人信息页面不允许使用动图
+                                            // 所以不做GIF判断,直接进行压缩
                                             val options: Tiny.FileCompressOptions =
                                                 Tiny.FileCompressOptions().apply {
                                                     size = 200f
@@ -113,6 +117,7 @@ class ProfileFragment : Fragment() {
                                                     } else {
                                                         MainScope().launch(Dispatchers.IO) {
                                                             try {
+                                                                // 对图片获取sha256进行判断
                                                                 val data = File(outfile).readBytes()
                                                                 val sha256 = data.sha256()
                                                                 if (!ChatServer.current.updateImageCheck(
@@ -121,6 +126,7 @@ class ProfileFragment : Fragment() {
                                                                         )
                                                                     )
                                                                 ) {
+                                                                    // 图片不存在,则调用上传图片
                                                                     val newUser =
                                                                         ChatServer.current.updateProfilePhoto(
                                                                             data,
@@ -129,6 +135,7 @@ class ProfileFragment : Fragment() {
                                                                     chatViewModel.userDao.update(
                                                                         newUser
                                                                     )
+                                                                    // 拿到新的newUser,更新viewModel
                                                                     withContext(Dispatchers.Main) {
                                                                         chatViewModel.updateProfile(
                                                                             newUser
@@ -137,6 +144,7 @@ class ProfileFragment : Fragment() {
                                                                         editMode = false
                                                                     }
                                                                 } else {
+                                                                    // 图片已经存在,只调用通知sha256
                                                                     val newUser =
                                                                         ChatServer.current.updateProfilePhoto(
                                                                             sha256
@@ -144,6 +152,7 @@ class ProfileFragment : Fragment() {
                                                                     chatViewModel.userDao.update(
                                                                         newUser
                                                                     )
+                                                                    // 拿到新的newUser,更新viewModel
                                                                     withContext(Dispatchers.Main) {
                                                                         chatViewModel.updateProfile(
                                                                             newUser
@@ -180,6 +189,7 @@ class ProfileFragment : Fragment() {
                             retryEvent!!.invoke()
                         }
                     }
+                    // endregion
                     if (uploadErrorShow) {
                         AlertDialog(
                             onDismissRequest = {
@@ -216,19 +226,23 @@ class ProfileFragment : Fragment() {
                             onNavIconPressed = {
                                 activityViewModel.openDrawer()
                             },
-                            chatServer = chatServer!!,
+                            chatServer = ChatServer.current,
                             editMode = editMode,
                             onEditSubmit = { user ->
+                                // region 陈卡 更新用户信息按钮点击
                                 MainScope().launch(Dispatchers.IO) {
                                     try {
-                                        val newUser = chatServer!!.updateProfile(user)
+                                        // 构建了新的User,直接调用chatServer封装好的更新函数
+                                        val newUser = ChatServer.current.updateProfile(user)
                                         chatViewModel.userDao.update(newUser)
+                                        // 更新了之后再更新viewModel
                                         withContext(Dispatchers.Main) {
                                             chatViewModel.updateProfile(newUser)
                                             viewModel.setProfile(newUser)
                                             editMode = false
                                         }
                                     } catch (e: Throwable) {
+                                        // 更新失败的toast提示
                                         withContext(Dispatchers.Main) {
                                             Toast.makeText(
                                                 context,
@@ -238,6 +252,7 @@ class ProfileFragment : Fragment() {
                                         }
                                     }
                                 }
+                                // endregion
                             },
                             onAvatarClick = {
                                 launcher.launch("image/*")

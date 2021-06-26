@@ -45,7 +45,7 @@ fun JetchatAppBar(
             elevation = 0.dp, // No shadow needed
             contentColor = MaterialTheme.colors.onSurface,
             actions = actions,
-            title = { Row { title() } }, // https://issuetracker.google.com/168793068
+            title = { Row { title() } }, // BUG, 详见 https://issuetracker.google.com/168793068
             navigationIcon = {
                 Image(
                     painter = painterResource(id = R.drawable.ic_jetchat),

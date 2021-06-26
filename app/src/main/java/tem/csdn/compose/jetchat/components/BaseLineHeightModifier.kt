@@ -11,17 +11,16 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 
 /**
- * Applied to a Text, it sets the distance between the top and the first baseline. It
- * also makes the bottom of the element coincide with the last baseline of the text.
+ * 应用于文本，设置顶部和第一个基线之间的距离
+ * 它使元素底部与文本的最后一条基线重合。
  *
  *     _______________
  *     |             |   ↑
- *     |             |   |  heightFromBaseline
+ *     |             |   |  基线高度
  *     |Hello, World!|   ↓
  *     ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
  *
- * This modifier can be used to distribute multiple text elements using a certain distance between
- * baselines.
+ * 此修饰符可用于使用基线之间的特定距离分布多个文本元素
  */
 data class BaselineHeightModifier(
     val heightFromBaseline: Dp

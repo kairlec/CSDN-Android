@@ -9,6 +9,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
+// region 聂国安 全屏对话框
+/**
+ * 全屏对话框
+ */
 @Composable
 fun FullScreenDialog(
     onClose: () -> Unit = {},
@@ -24,3 +28,4 @@ fun FullScreenDialog(
         }
     }
 }
+// endregion

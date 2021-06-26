@@ -11,17 +11,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
- * This [Composable] can be used with a [LocalBackPressedDispatcher] to intercept a back press.
+ * 这个 [Composable] 可以用 [LocalBackPressedDispatcher] 拦截返回事件
  *
- * @param onBackPressed (Event) What to do when back is intercepted
+ * @param onBackPressed (Event) 当返回事件拦截的时候要做的事件
  *
  */
 @Composable
 fun BackPressHandler(onBackPressed: () -> Unit) {
-    // Safely update the current `onBack` lambda when a new one is provided
+    // 当有新的提供者的时候安全更新 `onBack` lambda
     val currentOnBackPressed by rememberUpdatedState(onBackPressed)
 
-    // Remember in Composition a back callback that calls the `onBackPressed` lambda
+    // 记住在 Composition 中调用 `onBackPressed` lambda 的返回回调
     val backCallback = remember {
         object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -32,10 +32,10 @@ fun BackPressHandler(onBackPressed: () -> Unit) {
 
     val backDispatcher = LocalBackPressedDispatcher.current
 
-    // Whenever there's a new dispatcher set up the callback
+    // 当有新的调度器的时候设置新的回调
     DisposableEffect(backDispatcher) {
         backDispatcher.addCallback(backCallback)
-        // When the effect leaves the Composition, or there's a new dispatcher, remove the callback
+        // 当离开Composition或者有新的调度器的时候移除回调
         onDispose {
             backCallback.remove()
         }

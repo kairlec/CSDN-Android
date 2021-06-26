@@ -63,25 +63,6 @@ class ConversationFragment : Fragment() {
     private val chatViewModel: ChatViewModel by activityViewModels()
     private val activityViewModel: MainViewModel by activityViewModels()
 
-//    private var systemUiVisible: Boolean = true
-
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        requireActivity().window.addSystemUIVisibilityListener {
-//            systemUiVisible = it
-//        }
-//    }
-
-//    private fun toggleSystemUi() {
-//        if (systemUiVisible) {
-//            Log.d("CSDN_DEBUG", "hide systemui")
-//            requireActivity().hideSystemUI()
-//        } else {
-//            Log.d("CSDN_DEBUG", "show systemui")
-//            requireActivity().showSystemUI()
-//        }
-//    }
-
     @OptIn(ExperimentalAnimatedInsets::class) // Opt-in to experiment animated insets support
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -90,13 +71,16 @@ class ConversationFragment : Fragment() {
     ): View = ComposeView(inflater.context).apply {
         layoutParams = LayoutParams(MATCH_PARENT, MATCH_PARENT)
 
-        // Create a ViewWindowInsetObserver using this view, and call start() to
-        // start listening now. The WindowInsets instance is returned, allowing us to
-        // provide it to AmbientWindowInsets in our content below.
+        /*
+        * 使用此视图创建一个 ViewWindowInsetObserver，并立即调用 start() 开始侦听
+        * 返回 WindowInsets 实例
+        * 允许下面的内容中使用AmbientWindowInsets作为提供器
+        * */
         val windowInsets = ViewWindowInsetObserver(this)
-            // We use the `windowInsetsAnimationsEnabled` parameter to enable animated
-            // insets support. This allows our `ConversationContent` to animate with the
-            // on-screen keyboard (IME) as it enters/exits the screen.
+            /*
+            * 使用 `windowInsetsAnimationsEnabled` 参数来启用动画插入支持
+            * 这允许 `ConversationContent` 在进入/退出屏幕时使用屏幕键盘 (IME) 进行动画处理。
+            * */
             .start(windowInsetsAnimationsEnabled = true)
         setContent {
             val chatData by chatViewModel.chatData.observeAsState()
@@ -192,10 +176,8 @@ class ConversationFragment : Fragment() {
             }
 
             if (fullScreenShowBitmap != null) {
-//                toggleSystemUi()
                 FullScreenDialog(onClose = {
                     fullScreenShowBitmap = null
-//                    toggleSystemUi()
                 }) {
                     if (fullScreenShowBitmap != null) {
                         Box(
@@ -244,12 +226,15 @@ class ConversationFragment : Fragment() {
                                     .background(background),
                                 shape = RoundedCornerShape(40),
                                 onClick = {
+                                    // region 丁钰 图片发送
                                     val mime =
                                         context.contentResolver.getType(uploadConfirm!!.first)
                                     val bytes = uploadConfirm!!.second
                                     if (mime.equals("image/gif", true)) {
+                                        // GIF 不进行压缩
                                         MainScope().launch(Dispatchers.IO) {
                                             try {
+                                                // 先计算sha256,进行UPC(upload pic check)检查,如果存在的话就发送ImageText消息
                                                 val sha256 = bytes.sha256()
                                                 if (chatServer!!.updateImageCheck(
                                                         chatServer!!.chatAPI.upc(sha256)
@@ -262,6 +247,7 @@ class ConversationFragment : Fragment() {
                                                         )
                                                     )
                                                 } else {
+                                                    // 如果图片不存在,需要发送原始内容(Binary内容)
                                                     Log.d("CSDN_DEBUG_UPC", "upc检查不存在")
                                                     ChatServer.current.send(
                                                         RawWebSocketFrameWrapper.ofBinary(
@@ -278,6 +264,7 @@ class ConversationFragment : Fragment() {
                                             }
                                         }
                                     } else {
+                                        // 其他图片用tiny压缩
                                         val options: Tiny.FileCompressOptions =
                                             Tiny.FileCompressOptions().apply {
                                                 size = 200f
@@ -297,6 +284,7 @@ class ConversationFragment : Fragment() {
                                                 } else {
                                                     MainScope().launch(Dispatchers.IO) {
                                                         try {
+                                                            // 先计算压缩后的sha256,进行UPC(upload pic check)检查,如果存在的话就发送ImageText消息
                                                             val data = File(outfile).readBytes()
                                                             val sha256 = data.sha256()
                                                             if (chatServer!!.updateImageCheck(
@@ -310,6 +298,7 @@ class ConversationFragment : Fragment() {
                                                                     )
                                                                 )
                                                             } else {
+                                                                // 如果图片不存在,需要发送原始内容(Binary内容)
                                                                 Log.d("CSDN_DEBUG_UPC", "upc检查不存在")
                                                                 ChatServer.current.send(
                                                                     RawWebSocketFrameWrapper.ofBinary(
@@ -329,6 +318,8 @@ class ConversationFragment : Fragment() {
                                             }
                                     }
                                     uploadConfirm = null
+
+                                    // endregion
                                 }) {
                                 Text(text = stringResource(id = R.string.send), style = textStyle)
                             }

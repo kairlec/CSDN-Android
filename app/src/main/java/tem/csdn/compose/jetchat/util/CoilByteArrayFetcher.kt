@@ -11,6 +11,10 @@ import okio.buffer
 import okio.source
 import java.io.ByteArrayInputStream
 
+/**
+ * coil的字节数组解析器
+ * 让coil支持解析字节数组的图片表示
+ */
 class CoilByteArrayFetcher : Fetcher<ByteArray> {
     override suspend fun fetch(
         pool: BitmapPool,

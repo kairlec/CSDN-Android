@@ -26,7 +26,7 @@ fun AnimatingFabContent(
     extended: Boolean = true
 ) {
     val currentState = if (extended) ExpandableFabStates.Extended else ExpandableFabStates.Collapsed
-    val transition = updateTransition(currentState)
+    val transition = updateTransition(currentState, label = "")
 
     val textOpacity by transition.animateFloat(
         transitionSpec = {
@@ -42,7 +42,8 @@ fun AnimatingFabContent(
                     durationMillis = (transitionDuration / 12f * 5).roundToInt() // 5 / 12 frames
                 )
             }
-        }
+        },
+        label = ""
     ) { progress ->
         if (progress == ExpandableFabStates.Collapsed) {
             0f
@@ -63,7 +64,8 @@ fun AnimatingFabContent(
                     durationMillis = transitionDuration
                 )
             }
-        }
+        },
+        label = ""
     ) { progress ->
         if (progress == ExpandableFabStates.Collapsed) {
             0f

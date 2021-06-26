@@ -24,7 +24,6 @@ import tem.csdn.compose.jetchat.model.LocalMessage
 import tem.csdn.compose.jetchat.model.Message
 import tem.csdn.compose.jetchat.model.User
 import tem.csdn.compose.jetchat.util.DeviceIdUtil
-import tem.csdn.compose.jetchat.util.UUIDHelper
 import tem.csdn.compose.jetchat.util.client
 import java.util.*
 

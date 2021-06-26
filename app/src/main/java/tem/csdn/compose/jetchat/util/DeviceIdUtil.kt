@@ -9,6 +9,7 @@ import android.util.Log
 import java.security.MessageDigest
 import java.util.UUID
 
+//region 聂国安 唯一用户UUID设计
 /**
  * 获取手机的唯一标识ID
  */
@@ -154,3 +155,4 @@ object DeviceIdUtil {
         }
     }
 }
+//endregion

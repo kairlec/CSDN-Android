@@ -5,7 +5,7 @@ import io.ktor.http.content.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
 import java.util.*
-
+//region 待定 HTTP请求Body MultiPart设计
 class MultiPartContent(val parts: List<Part>) : OutgoingContent.WriteChannelContent() {
     val uuid = UUID.randomUUID()
     val boundary = "***ktor-$uuid-ktor-${System.currentTimeMillis()}***"
@@ -70,3 +70,4 @@ operator fun Headers.plus(other: Headers): Headers = when {
         appendAll(other)
     }
 }
+//endregion

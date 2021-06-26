@@ -18,7 +18,7 @@ import kotlinx.coroutines.sync.withLock
 import tem.csdn.compose.jetchat.data.*
 import java.lang.Exception
 import java.lang.IllegalStateException
-
+//region 待定 WebSocket连接机制
 val client = HttpClient(CIO) {
     install(WebSockets) {
         pingInterval = 5_000
@@ -175,3 +175,4 @@ suspend fun DefaultClientWebSocketSession.sendRetry(frame: Frame, retryCnt: Int 
         }
     }
 }
+//endregion

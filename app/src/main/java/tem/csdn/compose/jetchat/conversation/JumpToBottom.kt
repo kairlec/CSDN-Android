@@ -24,7 +24,7 @@ private enum class Visibility {
 }
 
 /**
- * Shows a button that lets the user scroll to the bottom.
+ * 显示一个回底按钮来滑动到最底下
  */
 @Composable
 fun JumpToBottom(
@@ -32,9 +32,10 @@ fun JumpToBottom(
     onClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Show Jump to Bottom button
-    val transition = updateTransition(if (enabled) Visibility.VISIBLE else Visibility.GONE)
-    val bottomOffset by transition.animateDp() {
+    val transition = updateTransition(if (enabled) Visibility.VISIBLE else Visibility.GONE,
+        label = ""
+    )
+    val bottomOffset by transition.animateDp(label = "") {
         if (it == Visibility.GONE) {
             (-32).dp
         } else {

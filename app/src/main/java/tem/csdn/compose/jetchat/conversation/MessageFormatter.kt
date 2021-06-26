@@ -16,30 +16,33 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 import tem.csdn.compose.jetchat.model.User
 
-// Regex containing the syntax tokens
+//region 待定 消息样式匹配
+
+// 正则表达式匹配这些语法符号
 val symbolPattern by lazy {
     Regex("""(https?://[^\s\t\n]+)|(`[^`]+`)|(@[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})|(\*[\w]+\*)|(_[\w]+_)|(~[\w]+~)""")
 }
 
-// Accepted annotations for the ClickableTextWrapper
+// ClickableTextWrapper所接受的类型
 enum class SymbolAnnotationType {
     PERSON, LINK
 }
+
 typealias StringAnnotation = AnnotatedString.Range<String>
-// Pair returning styled content and annotation for ClickableText when matching syntax token
+// 匹配语法标记时，为 ClickableText 配对返回样式内容和注释
 typealias SymbolAnnotation = Pair<AnnotatedString, StringAnnotation?>
 
 /**
- * Format a message following Markdown-lite syntax
- * | @username -> bold, primary color and clickable element
- * | http(s)://... -> clickable link, opening it into the browser
- * | *bold* -> bold
- * | _italic_ -> italic
- * | ~strikethrough~ -> strikethrough
- * | `MyClass.myMethod` -> inline code styling
+ * 轻量级的Markdown格式化消息
+ * | @displayId -> 加粗,使用primary颜色并标记可点击
+ * | http(s)://... -> 可点击的链接,可以在浏览器里打开
+ * | *bold* -> 粗体
+ * | _italic_ -> 删除线
+ * | ~strikethrough~ -> 斜体
+ * | `MyClass.myMethod` -> 行内代码样式
  *
- * @param text contains message to be parsed
- * @return AnnotatedString with annotations used inside the ClickableText wrapper
+ * @param text 包含要解析的内容消息
+ * @return 带有 ClickableTextWrapper 注释的 AnnotatedString
  */
 @Composable
 fun messageFormatter(
@@ -87,10 +90,10 @@ fun messageFormatter(
 }
 
 /**
- * Map regex matches found in a message with supported syntax symbols
+ * 使用支持的语法符号映射在消息中找到的正则表达式匹配
  *
- * @param matchResult is a regex result matching our syntax symbols
- * @return pair of AnnotatedString with annotation (optional) used inside the ClickableText wrapper
+ * @param matchResult 与语法符号匹配的正则表达式结果
+ * @return 在 ClickableTextWrapper 中使用的带注释（可选）的一对 AnnotatedString
  */
 private fun getSymbolAnnotation(
     matchResult: MatchResult,
@@ -179,3 +182,4 @@ private fun getSymbolAnnotation(
         else -> SymbolAnnotation(AnnotatedString(matchResult.value), null)
     }
 }
+//endregion

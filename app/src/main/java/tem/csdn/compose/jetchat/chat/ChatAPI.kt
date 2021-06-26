@@ -3,6 +3,7 @@ package tem.csdn.compose.jetchat.chat
 import android.util.Log
 import java.io.Serializable
 
+// region 粟唐焕 API设计
 class ChatAPI(val ssl: Boolean, val host: String, val port: Int? = null) : Serializable {
     private val baseUrl =
         "${if (ssl) "https" else "http"}://${host}${if (port == null) "" else ":${port}"}"
@@ -59,3 +60,4 @@ class ChatAPI(val ssl: Boolean, val host: String, val port: Int? = null) : Seria
         return "/csdnchat/${id}"
     }
 }
+//endregion

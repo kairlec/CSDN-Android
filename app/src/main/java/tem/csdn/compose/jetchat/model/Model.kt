@@ -12,7 +12,7 @@ data class Message(
 ) {
     fun toLocal(): LocalMessage = LocalMessage(id, content, timestamp, image, author.displayId)
 }
-
+//region 陈卡 客户端用户类设计
 @Entity(tableName = "users")
 data class User(
     @PrimaryKey val displayId: String,
@@ -32,6 +32,7 @@ data class User(
         return name.compareTo(other.name)
     }
 }
+//endregion
 
 
 @Entity(tableName = "messages")
@@ -45,7 +46,6 @@ data class LocalMessage(
     fun toNonLocal(users: Map<String, User>): Message {
         return Message(id, content, timestamp, image, users[authorDisplayId]!!)
     }
-
 }
 
 data class UserAndMessage(
